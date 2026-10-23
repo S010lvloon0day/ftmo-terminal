@@ -1,0 +1,742 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Терминал FTMO</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+/* Терминал: тёмная графитовая основа, плотная сетка, цифры выровнены по разрядам.
+   Цвет несёт только смысл: зелёный — прибыль, красный — убыток, янтарный — внимание, синий — выбранное. */
+:root{
+  --bg:#0f141b; --panel:#151c25; --raise:#1c2531; --line:#243041;
+  --text:#e2e8f0; --dim:#8593a6; --faint:#5a687b;
+  --up:#25c48f; --down:#f05a6c; --warn:#f2b84b; --sel:#6ea8fe;
+  --up-bg:rgba(37,196,143,.12); --down-bg:rgba(240,90,108,.12); --warn-bg:rgba(242,184,75,.14); --sel-bg:rgba(110,168,254,.14);
+  --font:"IBM Plex Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--text)}
+body{font:14px/1.35 var(--font);-webkit-font-smoothing:antialiased;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+:focus-visible{outline:2px solid var(--sel);outline-offset:2px;border-radius:4px}
+.n{font-variant-numeric:tabular-nums}
+.up{color:var(--up)}.down{color:var(--down)}.dim{color:var(--dim)}.warn{color:var(--warn)}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+
+/* верхняя строка */
+.top{position:sticky;top:0;z-index:4;background:var(--bg);border-bottom:1px solid var(--line)}
+.top .wrap{display:flex;align-items:center;gap:8px;height:40px;font-size:12px;color:var(--dim);white-space:nowrap}
+.top .who{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.led{width:7px;height:7px;border-radius:50%;background:var(--faint);flex:none}
+.led.on{background:var(--up);box-shadow:0 0 6px var(--up)}
+.led.off{background:var(--down)}
+.top b{color:var(--text);font-weight:600}
+.top .sp{margin-left:auto;text-align:right}
+
+/* полоса счёта */
+.acct{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;padding:14px 0 12px;align-items:end}
+.acct .eq{font-size:30px;font-weight:600;letter-spacing:-.5px;line-height:1}
+.acct .eq small{font-size:13px;color:var(--dim);font-weight:500;margin-left:4px;letter-spacing:0}
+.acct .chg{font-size:13px;display:flex;gap:4px 12px;justify-content:flex-end;flex-wrap:wrap}
+.acct .chg span{color:var(--dim)}
+.limits{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-bottom:12px}
+.lim{background:var(--panel);padding:8px 10px;min-width:0}
+.lim .k{font-size:11px;color:var(--dim);display:flex;justify-content:space-between;gap:4px;white-space:nowrap}
+.lim .v{font-size:15px;font-weight:600;margin:2px 0 6px}
+.lim .v small{font-size:11px;font-weight:400;color:var(--dim)}
+.meter{height:4px;background:var(--raise);border-radius:2px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--sel)}
+.meter i.ok{background:var(--up)}.meter i.warn{background:var(--warn)}.meter i.bad{background:var(--down)}
+.pips{display:flex;gap:3px}.pips i{flex:1;height:4px;border-radius:2px;background:var(--raise)}.pips i.on{background:var(--up)}
+
+/* сводка */
+.tape{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin:0 -16px 12px;padding:0 16px}
+.tape::-webkit-scrollbar{display:none}
+.chip{flex:none;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:6px 9px;font-size:12px;white-space:nowrap}
+.chip span{color:var(--dim)}
+.chip b{font-weight:600}
+
+/* панели */
+.pnl{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.ph{display:flex;align-items:center;gap:8px;padding:10px 12px 8px;min-height:40px}
+.ph h2{margin:0;font-size:13px;font-weight:600;letter-spacing:.1px}
+.ph .note{font-size:11px;color:var(--dim)}
+.tabs{display:flex;margin-left:auto;background:var(--raise);border-radius:6px;padding:2px;flex:none}
+.tabs button{font-size:11px;font-weight:600;color:var(--dim);padding:4px 8px;border-radius:4px;min-width:34px}
+.tabs button[aria-pressed=true]{background:var(--line);color:var(--text)}
+
+/* графики */
+.chart{position:relative;padding:0 0 6px;touch-action:pan-y}
+.chart svg{display:block;width:100%;overflow:visible}
+.tip{position:absolute;top:2px;pointer-events:none;background:var(--raise);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12px;opacity:0;transition:opacity .1s;white-space:nowrap;z-index:2}
+.tip b{font-size:13px}
+.tip .t{color:var(--dim);font-size:11px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;padding:0 12px 10px;font-size:11px;color:var(--dim)}
+.legend i{display:inline-block;width:12px;height:2px;vertical-align:middle;margin-right:5px;border-radius:1px}
+
+/* рейтинг */
+.lb-head,.lb-row{display:grid;grid-template-columns:18px minmax(0,1fr) 56px 76px 12px;gap:8px;align-items:center;padding:0 12px}
+.lb-head{font-size:10.5px;color:var(--faint);height:24px;border-top:1px solid var(--line)}
+.lb-head span:nth-child(4){text-align:right}
+.lb-row{width:100%;text-align:left;min-height:54px;border-top:1px solid var(--line)}
+.lb-row:active{background:var(--raise)}
+.lb-row.fail{opacity:.55}
+.rk{font-size:12px;color:var(--faint);text-align:center}
+.nm{min-width:0}
+.nm .a{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.nm .a em{font-style:normal;color:var(--dim);font-weight:500;margin-right:5px}
+.nm .b{font-size:11.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.spark{width:56px;height:26px;display:block}
+.res{text-align:right}
+.res .p{font-size:15px;font-weight:600}
+.res .m{font-size:11px;color:var(--dim);white-space:nowrap}
+.st{font-size:11px;width:14px;text-align:center}
+.st.paused{color:var(--warn)}
+.st.in{color:var(--sel)}.st.wait{color:var(--faint)}.st.target,.st.pass{color:var(--warn)}.st.fail{color:var(--down)}
+.key{display:flex;gap:12px;flex-wrap:wrap;padding:8px 12px 10px;border-top:1px solid var(--line);font-size:11px;color:var(--dim)}
+
+/* горизонтальные столбцы */
+.bars{padding:2px 12px 10px}
+.br{display:grid;grid-template-columns:minmax(0,104px) 1fr 70px;gap:8px;align-items:center;height:26px;font-size:12px;width:100%;text-align:left}
+.br .l{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--dim)}
+.br .l b{color:var(--text);font-weight:500}
+.br .track{position:relative;height:12px}
+.br .track::before{content:"";position:absolute;left:50%;top:-4px;bottom:-4px;border-left:1px solid var(--line)}
+.br .fill{position:absolute;top:0;height:100%;border-radius:2px}
+.br .fill.up{background:var(--up)}.br .fill.down{background:var(--down)}
+.br .v{text-align:right;font-weight:600}
+button.br:active{background:var(--raise)}
+
+/* строки-списки */
+.row{display:flex;align-items:center;gap:10px;padding:9px 12px;border-top:1px solid var(--line);min-height:44px}
+.row .main{flex:1;min-width:0}
+.row .t1{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .t2{font-size:11.5px;color:var(--dim);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row .val{text-align:right;font-weight:600;white-space:nowrap}
+.side{font-size:10px;font-weight:700;padding:2px 5px;border-radius:3px;flex:none}
+.side.buy{background:var(--up-bg);color:var(--up)}.side.sell{background:var(--down-bg);color:var(--down)}
+.ok-dot{width:8px;height:8px;border-radius:50%;flex:none}
+.empty{padding:12px;color:var(--dim);font-size:13px;border-top:1px solid var(--line)}
+
+/* карточка профиля */
+.sheet{position:fixed;inset:0;z-index:6;background:var(--bg);overflow:auto;transform:translateX(100%);transition:transform .26s cubic-bezier(.2,.8,.2,1);padding-bottom:calc(20px + env(safe-area-inset-bottom,0px))}
+.sheet.open{transform:none}
+.sh-top{display:flex;align-items:center;gap:10px;height:44px}
+.back{color:var(--sel);font-size:15px;padding:6px 0;display:none}
+html:not(.tg) .back{display:block}
+.pill{font-size:11px;font-weight:600;padding:3px 8px;border-radius:10px;white-space:nowrap}
+.pill.paused{background:var(--warn-bg);color:var(--warn)}
+.pill.in{background:var(--sel-bg);color:var(--sel)}.pill.wait{background:var(--raise);color:var(--dim)}
+.pill.target,.pill.pass{background:var(--warn-bg);color:var(--warn)}.pill.fail{background:var(--down-bg);color:var(--down)}
+.p-title{font-size:22px;font-weight:700;margin:2px 0 4px;letter-spacing:-.2px}
+.p-title em{font-style:normal;color:var(--dim);font-weight:500;margin-right:6px}
+.p-desc{color:var(--dim);font-size:13px;max-width:60ch;margin:0 0 10px}
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:14px}
+.tag{font-size:11.5px;background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:3px 7px;color:var(--dim)}
+.tag b{color:var(--text);font-weight:500}
+.p-eq{display:flex;align-items:baseline;gap:6px 12px;flex-wrap:wrap;margin-bottom:12px}
+.p-eq .big{font-size:30px;font-weight:600;letter-spacing:-.5px}
+.corr{padding:16px 12px 12px}
+.cbar{position:relative;height:10px;border-radius:5px;background:var(--raise);margin:18px 0 8px}
+.cbar .lost{position:absolute;left:0;top:0;bottom:0;border-radius:5px 0 0 5px;background:repeating-linear-gradient(135deg,rgba(240,90,108,.55) 0 3px,rgba(240,90,108,.18) 3px 7px)}
+.cbar .fl{position:absolute;top:0;bottom:0;background:rgba(110,168,254,.45)}
+.cbar .tk{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--dim)}
+.cbar .tk.stop{background:var(--down)}
+.cbar .mk{position:absolute;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:var(--bg);border:3px solid var(--sel)}
+.cbar .tl{position:absolute;bottom:14px;transform:translateX(-50%);font-size:10.5px;color:var(--down);white-space:nowrap}
+.cends{display:flex;justify-content:space-between;font-size:11px;color:var(--dim)}
+.cends b{display:block;color:var(--text);font-weight:500;font-size:12px}
+.cends div:nth-child(2){text-align:center}.cends div:last-child{text-align:right}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-top:1px solid var(--line)}
+.grid div{background:var(--panel);padding:9px 10px;min-width:0}
+.grid span{display:block;font-size:10.5px;color:var(--dim);margin-bottom:2px;white-space:nowrap}
+.grid b{font-size:14px;font-weight:600}
+@media (max-width:440px){.grid{grid-template-columns:repeat(2,1fr)}}
+
+.acts{display:flex;gap:8px;margin:0 0 12px}
+.acts.pad{padding:10px 12px;margin:0;border-top:1px solid var(--line)}
+.btn{flex:1;min-height:42px;padding:9px 10px;border-radius:8px;background:var(--raise);border:1px solid var(--line);font-weight:600;font-size:13.5px}
+.btn:active{opacity:.7}.btn[disabled]{opacity:.45}
+.btn.danger{color:var(--down);border-color:rgba(240,90,108,.45)}
+.btn.go{color:var(--up);border-color:rgba(37,196,143,.4)}
+.btn.armed{background:var(--down);color:#fff}
+.ea-note{font-size:12px;color:var(--warn);margin:-4px 0 10px}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:9;background:var(--raise);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:13px;max-width:calc(100% - 32px);box-shadow:0 6px 20px rgba(0,0,0,.4);opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+.msg{padding:80px 20px;text-align:center;color:var(--dim);line-height:1.5}
+.msg b{display:block;color:var(--text);font-size:17px;margin-bottom:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap" id="top"><span class="led"></span><span>Подключаюсь…</span></div></header>
+<main class="wrap" id="app"><div class="msg">Загружаю данные…</div></main>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Профиль"><div class="wrap" id="sheetBody"></div></div>
+
+<script>
+"use strict";
+const tg = window.Telegram && Telegram.WebApp && Telegram.WebApp.initData ? Telegram.WebApp : null;
+if (tg) {
+  document.documentElement.classList.add("tg");
+  tg.ready(); tg.expand();
+  try { tg.setHeaderColor("#0f141b"); tg.setBackgroundColor("#0f141b"); if (tg.setBottomBarColor) tg.setBottomBarColor("#0f141b"); } catch (e) {}
+}
+const haptic = (k) => { try { const h = tg && tg.HapticFeedback; if (!h) return; k === "sel" ? h.selectionChanged() : h.impactOccurred(k || "light"); } catch (e) {} };
+
+/* ── формат ── */
+const NB = " ";
+const F = (d) => new Intl.NumberFormat("ru-RU", {minimumFractionDigits:d, maximumFractionDigits:d});
+const f0 = F(0), f1 = F(1), f2 = F(2);
+const sp = (s) => s.replace(/\s/g, NB);
+const money = (v, d=2) => (v < 0 ? "−" : "") + sp((d ? f2 : f0).format(Math.abs(v)));
+const sgn = (v, d=2) => (v > 0 ? "+" : v < 0 ? "−" : "") + sp((d ? f2 : f0).format(Math.abs(v)));
+const pct = (v, d=2) => (v > 0 ? "+" : v < 0 ? "−" : "") + (d === 1 ? f1 : f2).format(Math.abs(v)) + "%";
+const tone = (v) => v > 0.004 ? "up" : v < -0.004 ? "down" : "dim";
+const dt = (t, o) => new Date(t*1000).toLocaleString("ru-RU", o || {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"});
+const dur = (s) => { s = Math.max(0, Math.round(s)); const d = Math.floor(s/86400), h = Math.floor(s%86400/3600), m = Math.floor(s%3600/60);
+  return d ? `${d}${NB}д ${h}${NB}ч` : h ? `${h}${NB}ч ${m}${NB}мин` : `${m}${NB}мин`; };
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const plural = (n, a, b, c) => { const m = n%10, h = n%100; return m===1&&h!==11 ? a : m>=2&&m<=4&&(h<12||h>14) ? b : c; };
+
+/* DOM строится только через textContent — строки из MT5 никогда не попадают в innerHTML */
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === "class") el.className = v;
+    else if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v);
+  }
+  for (const c of kids.flat(Infinity)) if (c != null && c !== false) el.append(c instanceof Node ? c : String(c));
+  return el;
+}
+const SVG = (tag, attrs, ...kids) => {
+  const el = document.createElementNS("http://www.w3.org/2000/svg", tag);
+  for (const [k, v] of Object.entries(attrs || {})) if (v != null) el.setAttribute(k, v);
+  for (const c of kids.flat()) if (c != null) el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return el;
+};
+
+const STATE = {in:["●","В рынке"], wait:["○","Ждёт сигнала"], paused:["⏸","Пауза"], target:["◎","Цель взята"], pass:["★","Этап пройден"], fail:["✕","Провал"]};
+
+/* ── данные ── */
+const store = { get(k){ try { return localStorage.getItem(k); } catch(e){ return null; } }, set(k,v){ try { localStorage.setItem(k,v); } catch(e){} } };
+let S = null, HIST = {}, loadedAt = 0, openId = null, P = null;
+let range = store.get("range") || "7d", sortKey = store.get("sort") || "profit", pRange = "7d";
+
+/* ── данные с GitHub: зашифрованный снимок, ключ только в ссылке из бота ── */
+const QS = new URLSearchParams(location.search);
+const KEY = QS.get("k") || "", REPO = QS.get("r") || "S010lvloon0day/ftmo-terminal", BOT = QS.get("b") || "S010ftnobot";
+let SNAP = null, snapAt = 0, snapLoading = null;
+const b64u = (s) => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), c => c.charCodeAt(0));
+async function fetchSnap() {
+  if (!KEY) throw new Error("403");
+  const urls = [`https://api.github.com/repos/${REPO}/contents/state.bin?ref=data&t=${Date.now()}`,
+                `https://raw.githubusercontent.com/${REPO}/data/state.bin?t=${Date.now()}`];
+  let buf = null;
+  for (const [i, u] of urls.entries()) {
+    try {
+      const r = await fetch(u, {cache:"no-store", headers: i === 0 ? {"Accept":"application/vnd.github.raw"} : {}});
+      if (r.ok) { buf = new Uint8Array(await r.arrayBuffer()); break; }
+    } catch (e) {}
+  }
+  if (!buf) throw new Error("http");
+  const key = await crypto.subtle.importKey("raw", b64u(KEY), "AES-GCM", false, ["decrypt"]);
+  let plain;
+  try { plain = await crypto.subtle.decrypt({name:"AES-GCM", iv: buf.slice(0, 12)}, key, buf.slice(12)); }
+  catch (e) { throw new Error("403"); }
+  const txt = await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+  SNAP = JSON.parse(txt); snapAt = Date.now();
+}
+async function api(path) {
+  if (!SNAP || Date.now() - snapAt > 60000) {
+    if (!snapLoading) snapLoading = fetchSnap().finally(() => { snapLoading = null; });
+    try { await snapLoading; } catch (e) { if (!SNAP) throw e; }
+  }
+  const q = new URLSearchParams(path.split("?")[1] || "");
+  const now = Math.floor(Date.now() / 1000), lag = Math.max(0, now - SNAP.t);
+  if (path.startsWith("/api/state")) {
+    const st = JSON.parse(JSON.stringify(SNAP.state));
+    st.server_now = (st.server_now || SNAP.t) + lag;
+    (st.accounts || []).forEach(a => { a.age = (a.age || 0) + lag; if (a.age > 600) a.online = false; });
+    st.snapshot_age = lag;
+    return st;
+  }
+  if (path.startsWith("/api/history")) return SNAP.hist[q.get("r") || "7d"] || {series:{}};
+  if (path.startsWith("/api/profile")) {
+    const p = (SNAP.prof[q.get("id")] || {})[q.get("r") || "7d"];
+    if (!p) throw new Error("http 404");
+    return {ok:true, profile:p};
+  }
+  throw new Error("http 404");
+}
+
+/* ── верхняя строка ── */
+function renderTop() {
+  const top = document.getElementById("top");
+  if (!S || !S.has_data) { top.replaceChildren(h("span", {class:"led"}), h("span", {}, "Нет данных от MT5")); return; }
+  const a = S.accounts[0];
+  const allOn = S.accounts.every(x => x.online);
+  top.replaceChildren(
+    h("span", {class:"led " + (allOn ? "on" : "off")}),
+    h("span", {class:"who"}, h("b", {}, `${S.title} ${S.phase}`), S.accounts.length > 1 ? ` · ${S.accounts.length} счетов` : ` #${a.login}`),
+    h("span", {class:"sp n", id:"clock"}));
+  tick();
+}
+function tick() {
+  const c = document.getElementById("clock"); if (!c || !S || !S.has_data) return;
+  const el = Math.round((Date.now() - loadedAt) / 1000);
+  const a = S.accounts[0], age = Math.min(...S.accounts.map(x => x.age)) + el;
+  const parts = [age < 60 ? `${age}${NB}с` : `${Math.floor(age/60)}${NB}мин`];
+  if (a.day_reset_at) { const left = a.day_reset_at - (S.server_now + el); if (left > 0) parts.push(`новый день ${Math.floor(left/3600)}:${String(Math.floor(left%3600/60)).padStart(2,"0")}`); }
+  c.textContent = parts.join("  ·  ");
+}
+
+/* ── главный экран ── */
+function render() {
+  renderTop();
+  const app = document.getElementById("app");
+  if (!S.has_data) {
+    app.replaceChildren(h("div", {class:"msg"}, h("b", {}, "MT5 пока молчит"),
+      "Запустите терминал и добавьте FTMOStatus на любой график. Данные появятся через несколько секунд."));
+    return;
+  }
+  const keepChart = document.getElementById("perf");
+  app.replaceChildren(...S.accounts.map(accountBlock), tape(), perfPanel(), leaderPanel(), contribPanel(), symbolPanel(), healthPanel());
+  if (keepChart) document.getElementById("perf").replaceWith(keepChart);
+  else drawPerf();
+}
+
+function accountBlock(a) {
+  const m = a.metrics, cur = a.account.currency || "";
+  const lvl = (p) => p >= 80 ? "bad" : p >= 50 ? "warn" : "ok";
+  const pips = []; for (let i = 0; i < m.min_days; i++) pips.push(h("i", {class: i < m.trading_days ? "on" : ""}));
+  return h("section", {},
+    h("div", {class:"acct"},
+      h("div", {}, h("div", {class:"dim", style:"font-size:11px;margin-bottom:5px"}, S.accounts.length > 1 ? `Счёт #${a.login}` : "Средства счёта"),
+        h("div", {class:"eq n"}, money(m.equity), h("small", {}, cur))),
+      h("div", {class:"chg n"},
+        h("div", {}, h("span", {}, "всего "), h("b", {class:tone(m.profit)}, `${sgn(m.profit, 0)} (${pct(m.profit_pct)})`)),
+        h("div", {}, h("span", {}, "сегодня "), h("b", {class:tone(m.today)}, sgn(m.today, 0))))),
+    h("div", {class:"limits"},
+      h("div", {class:"lim"}, h("div", {class:"k"}, h("span", {}, `Дневной лимит ${S.daily_pct}%`)),
+        h("div", {class:"v n " + (m.daily_used >= 50 ? "warn" : "")}, `${f0.format(m.daily_used)}%`, h("small", {}, " потрачено")),
+        h("div", {class:"meter"}, h("i", {class:lvl(m.daily_used), style:`width:${clamp(m.daily_used,0,100)}%`}))),
+      h("div", {class:"lim"}, h("div", {class:"k"}, h("span", {}, `Общий лимит ${S.max_pct}%`)),
+        h("div", {class:"v n " + (m.max_used >= 50 ? "warn" : "")}, `${f0.format(m.max_used)}%`, h("small", {}, " потрачено")),
+        h("div", {class:"meter"}, h("i", {class:lvl(m.max_used), style:`width:${clamp(m.max_used,0,100)}%`}))),
+      h("div", {class:"lim"}, h("div", {class:"k"}, h("span", {}, "Торговые дни"),
+          h("span", {}, S.days_left != null ? `ещё ${S.days_left}${NB}дн.` : "")),
+        h("div", {class:"v n"}, `${m.trading_days} из ${m.min_days}`), h("div", {class:"pips"}, pips))));
+}
+
+function tape() {
+  const ps = S.profiles;
+  const by = [...ps].sort((a, b) => b.metrics.profit_pct - a.metrics.profit_pct);
+  const best = by[0], worst = by[by.length - 1];
+  const plus = ps.filter(p => p.metrics.profit > 0).length;
+  const inMkt = ps.filter(p => p.positions.length).length;
+  const fails = ps.filter(p => p.state === "fail").length;
+  const goals = ps.filter(p => p.state === "target" || p.state === "pass").length;
+  const chip = (k, v, cls) => h("div", {class:"chip"}, h("span", {}, k + " "), h("b", {class:cls || ""}, v));
+  return h("div", {class:"tape n"},
+    chip("Лучший", `${best.id} ${pct(best.metrics.profit_pct)}`, tone(best.metrics.profit_pct)),
+    chip("Худший", `${worst.id} ${pct(worst.metrics.profit_pct)}`, tone(worst.metrics.profit_pct)),
+    chip("В плюсе", `${plus} из ${ps.length}`),
+    chip("В рынке", String(inMkt)),
+    goals ? chip("Цель взяли", String(goals), "warn") : null,
+    fails ? chip("Провалили", String(fails), "down") : null);
+}
+
+/* ── графики ── */
+const RANGES = [["1d","1Д"],["7d","7Д"],["30d","30Д"],["all","Всё"]];
+function tabs(cur, list, onPick, label) {
+  const box = h("div", {class:"tabs", role:"group", "aria-label":label});
+  list.forEach(([k, l]) => box.append(h("button", {"aria-pressed":String(k === cur), onclick: () => {
+    if (k === cur) return; cur = k; haptic("sel");
+    box.querySelectorAll("button").forEach((b, i) => b.setAttribute("aria-pressed", String(list[i][0] === k)));
+    onPick(k);
+  }}, l)));
+  return box;
+}
+function perfPanel() {
+  return h("section", {class:"pnl", id:"perf"},
+    h("div", {class:"ph"}, h("h2", {}, "Доходность профилей, %"),
+      tabs(range, RANGES, (k) => { range = k; store.set("range", k); loadHistory(); }, "Период")),
+    h("div", {class:"chart", id:"perfChart"}),
+    h("div", {class:"legend"}, h("span", {}, h("i", {style:"background:var(--sel)"}), "выбранный профиль"),
+      h("span", {}, h("i", {style:"background:var(--faint)"}), "остальные"), h("span", {}, "ведите пальцем по графику")));
+}
+
+function lineChart(box, series, opts) {
+  /* series: [{id, label, pts:[[t,v]...]}]; одна выделенная линия, остальные приглушены */
+  const W = Math.max(280, box.clientWidth), H = opts.height || 200, L = 8, R = W - 52, T = 12, B = H - 22;
+  const all = series.flatMap(s => s.pts);
+  box.replaceChildren();
+  if (all.length < 2) { box.append(h("div", {class:"empty", style:"border:0"}, "График наполняется: точка добавляется раз в минуту.")); return; }
+  const t0 = Math.min(...all.map(p => p[0])), t1 = Math.max(...all.map(p => p[0]));
+  let lo = Math.min(...all.map(p => p[1]), opts.base ?? 0), hi = Math.max(...all.map(p => p[1]), opts.base ?? 0);
+  if (opts.single && opts.base != null) { lo = Math.min(...all.map(p => p[1]), opts.base); hi = Math.max(...all.map(p => p[1]), opts.base); }
+  const pad = (hi - lo) * 0.12 || 0.5; lo -= pad; hi += pad;
+  const X = (t) => L + (R - L) * (t - t0) / Math.max(1, t1 - t0), Y = (v) => B - (B - T) * (v - lo) / (hi - lo);
+  const svg = SVG("svg", {viewBox:`0 0 ${W} ${H}`, height:H, role:"img", "aria-label":opts.aria || "График"});
+  for (let i = 0; i <= 2; i++) {
+    const v = lo + pad + (hi - lo - 2*pad) * i / 2, y = Y(v);
+    svg.append(SVG("line", {x1:L, x2:R, y1:y, y2:y, stroke:"var(--line)", "stroke-width":1}));
+    svg.append(SVG("text", {x:R + 6, y:y + 4, "font-size":10.5, fill:"var(--faint)"}, opts.fmt(v)));
+  }
+  if (opts.base != null) svg.append(SVG("line", {x1:L, x2:R, y1:Y(opts.base), y2:Y(opts.base), stroke:"var(--dim)", "stroke-width":1, "stroke-dasharray":"3 3"}));
+  const path = (pts) => pts.map((p, i) => (i ? "L" : "M") + X(p[0]).toFixed(1) + " " + Y(p[1]).toFixed(1)).join("");
+  const g = SVG("g", {}), lines = {};
+  if (opts.single && series[0] && series[0].pts.length > 1) {
+    const s = series[0], last = s.pts[s.pts.length - 1];
+    const col = last[1] >= opts.base ? "var(--up)" : "var(--down)";
+    g.append(SVG("path", {d:path(s.pts) + `L${X(last[0])} ${B}L${X(s.pts[0][0])} ${B}Z`, fill:col, opacity:.08}));
+  }
+  series.forEach(s => { if (s.pts.length < 2) return;
+    const el = SVG("path", {d:path(s.pts), fill:"none", stroke:"var(--faint)", "stroke-width":1.25, "stroke-linejoin":"round", opacity:.5});
+    lines[s.id] = el; g.append(el); });
+  svg.append(g);
+  const fmtT = (t1 - t0) > 2*86400 ? {day:"numeric", month:"short"} : {hour:"2-digit", minute:"2-digit"};
+  svg.append(SVG("text", {x:L, y:H - 5, "font-size":10.5, fill:"var(--faint)"}, dt(t0, fmtT)));
+  svg.append(SVG("text", {x:R, y:H - 5, "font-size":10.5, fill:"var(--faint)", "text-anchor":"end"}, dt(t1, fmtT)));
+  const xl = SVG("line", {y1:T - 6, y2:B, stroke:"var(--dim)", "stroke-width":1, opacity:0});
+  const dot = SVG("circle", {r:4.5, fill:"var(--sel)", stroke:"var(--panel)", "stroke-width":2, opacity:0});
+  const endLbl = SVG("text", {"font-size":11.5, "font-weight":600, fill:"var(--sel)"});
+  svg.append(xl, endLbl, dot);
+  const hit = SVG("rect", {x:0, y:0, width:W, height:H, fill:"transparent"});
+  svg.append(hit);
+  box.append(svg);
+  const tip = h("div", {class:"tip"}); box.append(tip);
+
+  let sel = opts.hi && lines[opts.hi] ? opts.hi : (series.find(s => s.pts.length > 1) || {}).id;
+  const highlight = (id) => {
+    sel = id;
+    for (const [k, el] of Object.entries(lines)) {
+      const on = k === id;
+      el.setAttribute("stroke", on ? (opts.single ? "var(--sel)" : "var(--sel)") : "var(--faint)");
+      el.setAttribute("stroke-width", on ? 2.25 : 1.25);
+      el.setAttribute("opacity", on ? 1 : .5);
+      if (on) g.append(el);
+    }
+    const s = series.find(x => x.id === id); if (!s || s.pts.length < 2) return;
+    const last = s.pts[s.pts.length - 1];
+    endLbl.setAttribute("x", X(last[0]) - 6); endLbl.setAttribute("text-anchor", "end"); endLbl.setAttribute("y", clamp(Y(last[1]) - 8, T + 6, B));
+    endLbl.textContent = opts.single ? "" : s.id;
+  };
+  highlight(sel);
+  let lastKey = "";
+  const move = (ev) => {
+    const r = box.getBoundingClientRect(), px = (ev.clientX - r.left) * (W / r.width), py = (ev.clientY - r.top) * (H / r.height);
+    const t = t0 + (px - L) / (R - L) * (t1 - t0);
+    let best = null;
+    for (const s of series) {
+      if (s.pts.length < 2) continue;
+      let i = 0, bd = Infinity;
+      for (let k = 0; k < s.pts.length; k++) { const d = Math.abs(s.pts[k][0] - t); if (d < bd) { bd = d; i = k; } }
+      const p = s.pts[i], dy = opts.single ? 0 : Math.abs(Y(p[1]) - py);
+      if (!best || dy < best.dy) best = {s, p, dy};
+    }
+    if (!best) return;
+    const {s, p} = best, x = X(p[0]), y = Y(p[1]);
+    if (s.id !== sel) highlight(s.id);
+    xl.setAttribute("x1", x); xl.setAttribute("x2", x); xl.setAttribute("opacity", 1);
+    dot.setAttribute("cx", x); dot.setAttribute("cy", y); dot.setAttribute("opacity", 1);
+    tip.replaceChildren(h("b", {class:"n " + tone(p[1] - (opts.base || 0))}, opts.fmt(p[1], true)),
+      opts.single ? null : h("div", {}, s.label), h("div", {class:"t"}, dt(p[0])));
+    tip.style.opacity = 1;
+    const tw = tip.offsetWidth; tip.style.left = clamp(x / W * r.width - tw / 2, 4, r.width - tw - 4) + "px";
+    const key = s.id + p[0]; if (key !== lastKey) { lastKey = key; haptic("sel"); }
+  };
+  const leave = () => { xl.setAttribute("opacity", 0); dot.setAttribute("opacity", 0); tip.style.opacity = 0; };
+  hit.addEventListener("pointermove", move); hit.addEventListener("pointerdown", move);
+  hit.addEventListener("pointerleave", leave);
+  hit.addEventListener("pointerup", (e) => { if (e.pointerType !== "mouse") setTimeout(leave, 1500); });
+}
+
+function drawPerf() {
+  const box = document.getElementById("perfChart"); if (!box || !S) return;
+  const names = Object.fromEntries(S.profiles.map(p => [p.id, `${p.id} ${p.name}`]));
+  const series = Object.entries(HIST).map(([id, pts]) => ({id, label:names[id] || id, pts}));
+  const leader = [...S.profiles].sort((a, b) => b.metrics.profit_pct - a.metrics.profit_pct)[0];
+  lineChart(box, series, {height:210, base:0, hi:leader && leader.id, fmt:(v, full) => pct(v, full ? 2 : 1),
+    aria:"Доходность профилей в процентах"});
+}
+
+/* ── рейтинг ── */
+const SORTS = [["profit","Доход"],["today","Сегодня"],["pf","PF"]];
+function sorted() {
+  const f = {profit:(p) => p.metrics.profit_pct, today:(p) => p.metrics.today_pct, pf:(p) => p.stats.pf ?? -1}[sortKey];
+  return [...S.profiles].sort((a, b) => ((b.state !== "fail") - (a.state !== "fail")) || (f(b) - f(a)));
+}
+function spark(vals) {
+  const w = 56, hh = 26, svg = SVG("svg", {class:"spark", viewBox:`0 0 ${w} ${hh}`, "aria-hidden":"true"});
+  if (!vals || vals.length < 2) return svg;
+  const lo = Math.min(0, ...vals), hi = Math.max(0, ...vals), r = hi - lo || 1;
+  const Y = (v) => hh - 3 - (hh - 6) * (v - lo) / r, X = (i) => 1 + (w - 2) * i / (vals.length - 1);
+  svg.append(SVG("line", {x1:0, x2:w, y1:Y(0), y2:Y(0), stroke:"var(--line)", "stroke-width":1}));
+  const last = vals[vals.length - 1], col = last >= 0 ? "var(--up)" : "var(--down)";
+  svg.append(SVG("path", {d:vals.map((v, i) => (i ? "L" : "M") + X(i).toFixed(1) + " " + Y(v).toFixed(1)).join(""),
+    fill:"none", stroke:col, "stroke-width":1.5, "stroke-linejoin":"round"}));
+  svg.append(SVG("circle", {cx:X(vals.length - 1), cy:Y(last), r:2, fill:col}));
+  return svg;
+}
+function leaderPanel() {
+  const rows = sorted().map((p, i) => {
+    const m = p.metrics, s = p.stats, [ico, lbl] = STATE[p.state];
+    const sub = [p.symbols.map(x => x.replace(".cash", "").replace(".sim", "").replace("USD", "")).join("+")];
+    const sg = p.ea && p.ea.signal;
+    if (sg != null && !p.positions.length) sub.push(sg < 0 ? "нет истории" : sg > 0 ? "сигнал: купить" : "сигнал: вне рынка");
+    return h("button", {class:"lb-row" + (p.state === "fail" ? " fail" : ""), onclick: () => openProfile(p.id),
+        "aria-label":`${p.id} ${p.name}, ${pct(m.profit_pct)}, ${lbl}`},
+      h("span", {class:"rk n"}, i + 1),
+      h("span", {class:"nm"}, h("div", {class:"a"}, h("em", {}, p.id), p.name), h("div", {class:"b"}, sub.join(" · "))),
+      spark(p.spark),
+      h("span", {class:"res n"}, h("div", {class:"p " + tone(m.profit_pct)}, pct(m.profit_pct)),
+        h("div", {class:"m"}, sortKey === "pf" ? `PF ${s.pf != null ? f2.format(s.pf) : "—"}` : `сегодня ${pct(m.today_pct)}`)),
+      h("span", {class:"st " + p.state, title:lbl}, ico));
+  });
+  return h("section", {class:"pnl"},
+    h("div", {class:"ph"}, h("h2", {}, "Рейтинг профилей"),
+      tabs(sortKey, SORTS, (k) => { sortKey = k; store.set("sort", k); render(); }, "Сортировка")),
+    h("div", {class:"lb-head"}, h("span", {}, "#"), h("span", {}, "Профиль"), h("span", {}, "7 дней"), h("span", {}, "Доход"), h("span", {})),
+    rows,
+    h("div", {class:"key"}, Object.values(STATE).map(([i, l]) => h("span", {}, i + " " + l.toLowerCase()))));
+}
+
+/* ── что приносит прибыль ── */
+function barsBlock(items, onClick) {
+  const max = Math.max(1, ...items.map(x => Math.abs(x.v)));
+  return h("div", {class:"bars"}, items.map(x => {
+    const w = Math.abs(x.v) / max * 50;
+    const fill = h("span", {class:"fill " + (x.v >= 0 ? "up" : "down"), style: x.v >= 0 ? `left:50%;width:${w}%` : `left:${50 - w}%;width:${w}%`});
+    return h(onClick ? "button" : "div", {class:"br", onclick: onClick ? () => onClick(x) : null},
+      h("span", {class:"l"}, x.b ? h("b", {}, x.b + " ") : null, x.l),
+      h("span", {class:"track"}, fill),
+      h("span", {class:"v n " + tone(x.v)}, sgn(x.v, 0)));
+  }));
+}
+function contribPanel() {
+  const items = [...S.profiles].sort((a, b) => b.metrics.profit - a.metrics.profit)
+    .map(p => ({id:p.id, b:p.id, l:p.name, v:p.metrics.profit}));
+  const total = items.reduce((s, x) => s + x.v, 0);
+  return h("section", {class:"pnl"},
+    h("div", {class:"ph"}, h("h2", {}, "Кто зарабатывает, $"), h("span", {class:"note n", style:"margin-left:auto"}, "итого ", h("b", {class:tone(total)}, sgn(total, 0)))),
+    barsBlock(items, (x) => openProfile(x.id)));
+}
+function symbolPanel() {
+  const e = Object.entries(S.by_symbol || {});
+  if (!e.length) return null;
+  return h("section", {class:"pnl"},
+    h("div", {class:"ph"}, h("h2", {}, "Что приносит прибыль: инструменты, $"), h("span", {class:"note", style:"margin-left:auto"}, "все профили")),
+    barsBlock(e.map(([k, v]) => ({l:k, v}))));
+}
+
+/* ── терминал ── */
+function healthPanel() {
+  return h("section", {class:"pnl"},
+    h("div", {class:"ph"}, h("h2", {}, "Терминал MT5")),
+    S.accounts.map(a => {
+      const t = a.terminal || {}, algo = t.trade_allowed && t.expert_allowed;
+      const need = S.profiles.filter(p => p.login === a.login).length || 1;
+      const eaOk = a.ea_count == null || a.ea_count >= need;
+      const row = (ok, t1, t2, val) => h("div", {class:"row"}, h("span", {class:"ok-dot", style:`background:${ok ? "var(--up)" : "var(--down)"}`}),
+        h("div", {class:"main"}, h("div", {class:"t1"}, t1), t2 ? h("div", {class:"t2"}, t2) : null), val ? h("div", {class:"val dim n", style:"font-weight:400"}, val) : null);
+      return [
+        row(!!t.connected, t.connected ? `#${a.login}: связь с сервером есть` : `#${a.login}: нет связи с сервером`, a.account.server, t.ping_ms != null ? `${t.ping_ms}${NB}мс` : null),
+        row(!!algo, algo ? "Алготорговля включена" : "Алготорговля выключена", algo ? null : "Советники не могут открывать сделки"),
+        row(eaOk, `${S.expect_ea}: ${a.ea_count ?? "—"} из ${need} на графиках`, eaOk ? null : "Часть профилей не запущена"),
+        row(true, "Свободная маржа", `плечо 1:${a.account.leverage}`, money(a.account.free_margin, 0)),
+      ];
+    }),
+    h("div", {class:"acts pad"},
+      h("button", {class:"btn go", onclick: (e) => doAction(e.currentTarget, "all", "resume", "Снять паузу со всех профилей?")}, "▶ Продолжить всё"),
+      h("button", {class:"btn", onclick: (e) => doAction(e.currentTarget, "all", "now",
+        "Все профили: принять решение сейчас по текущим ценам?")}, "⚡ Решить всем"),
+      h("button", {class:"btn danger", onclick: (e) => doAction(e.currentTarget, "all", "stopall",
+        "Закрыть ВСЕ позиции и поставить все профили на паузу?")}, "⛔ Стоп всё")),
+    h("div", {class:"empty", style:"font-size:12px"}, "Кнопки открывают бота: подтвердите команду там — советник выполнит её за 10 секунд. Данные здесь обновляются раз в минуту."));
+}
+
+/* ── карточка профиля ── */
+async function openProfile(id) {
+  openId = id; pRange = "7d"; haptic("light");
+  const sh = document.getElementById("sheet");
+  P = Object.assign({}, S.profiles.find(p => p.id === id), {trades:null, history:null});
+  renderProfile();
+  sh.classList.add("open"); sh.scrollTop = 0;
+  if (tg) { tg.BackButton.show(); tg.BackButton.onClick(closeProfile); }
+  await loadProfile();
+}
+function closeProfile() {
+  openId = null;
+  document.getElementById("sheet").classList.remove("open");
+  if (tg) { tg.BackButton.offClick(closeProfile); tg.BackButton.hide(); }
+}
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeProfile(); });
+async function loadProfile() {
+  if (!openId) return;
+  try { const r = await api(`/api/profile?id=${encodeURIComponent(openId)}&r=${pRange}`); if (r.profile.id === openId) { P = r.profile; renderProfile(); } } catch (e) {}
+}
+
+function renderProfile() {
+  const p = P, m = p.metrics, s = p.stats, [, lbl] = STATE[p.state];
+  const body = document.getElementById("sheetBody");
+  const y = document.getElementById("sheet").scrollTop;
+  const tag = (k, v) => h("span", {class:"tag"}, k ? k + " " : "", h("b", {}, v));
+  const stat = (k, v, cls) => h("div", {}, h("span", {}, k), h("b", {class:"n " + (cls || "")}, v));
+  const lo = m.max_floor, hiv = m.initial + m.target, stop = Math.max(m.daily_floor, m.max_floor);
+  const X = (v) => clamp((v - lo) / (hiv - lo) * 100, 0, 100);
+  const pieces = [
+    h("div", {class:"sh-top"}, h("button", {class:"back", onclick:closeProfile}, "‹ Рейтинг"),
+      h("span", {class:"pill " + p.state, style:"margin-left:auto"}, p.state_label || lbl)),
+    h("h1", {class:"p-title"}, h("em", {}, p.id), p.name),
+    h("p", {class:"p-desc"}, p.desc),
+    h("div", {class:"tags"},
+      tag("", p.symbols.join(", ")), tag("стратегия", p.strategy), p.sma ? tag("SMA", p.sma) : null,
+      p.risk ? tag("риск", Math.round(p.risk * 100) + "%") : null, p.time ? tag("решение", p.time) : null,
+      p.flat_weekend ? tag("", "закрывает в пятницу") : null, p.magic ? tag("magic", p.magic) : null,
+      tag(p.virtual ? "виртуальный счёт" : "счёт", "$" + money(m.initial, 0)), p.tested ? tag("", "есть бэктест") : null),
+    h("div", {class:"p-eq n"}, h("span", {class:"big"}, money(m.equity)),
+      h("b", {class:tone(m.profit)}, `${sgn(m.profit)} (${pct(m.profit_pct)})`),
+      h("span", {class:"dim"}, "сегодня ", h("b", {class:tone(m.today)}, sgn(m.today)))),
+    ...profileActions(p).filter(Boolean),
+    signalNote(p),
+    h("section", {class:"pnl"},
+      h("div", {class:"ph"}, h("h2", {}, "Правила FTMO для профиля"), h("span", {class:"note", style:"margin-left:auto"}, `${m.trading_days} из ${m.min_days} торговых дней`)),
+      h("div", {class:"corr"},
+        h("div", {class:"cbar", role:"img", "aria-label":`Средства ${money(m.equity,0)}, стоп ${money(stop,0)}, цель ${money(hiv,0)}`},
+          h("span", {class:"lost", style:`width:${X(stop)}%`}),
+          h("span", {class:"fl", style:`left:${Math.min(X(m.initial), X(m.equity))}%;width:${Math.abs(X(m.equity) - X(m.initial))}%`}),
+          h("span", {class:"tk", style:`left:${X(m.initial)}%`}), h("span", {class:"tk stop", style:`left:${X(stop)}%`}),
+          h("span", {class:"tl", style:`left:${clamp(X(stop), 10, 90)}%`}, m.daily_floor > m.max_floor ? "стоп дня" : "провал"),
+          h("span", {class:"mk", style:`left:${X(m.equity)}%`})),
+        h("div", {class:"cends n"}, h("div", {}, h("b", {}, money(lo, 0)), "провал"), h("div", {}, h("b", {}, money(m.initial, 0)), "старт"),
+          h("div", {}, h("b", {}, money(hiv, 0)), "цель +" + S.target_pct + "%"))),
+      h("div", {class:"grid"},
+        stat("До цели", m.target_hit ? "взята" : "+" + money(m.target_left, 0), m.target_hit ? "warn" : ""),
+        stat("Можно потерять", money(Math.max(0, m.room), 0), m.room < m.daily_limit * 0.3 ? "down" : ""),
+        stat("Дневной лимит", `${f0.format(m.daily_used)}%`, m.daily_used >= 50 ? "warn" : ""),
+        stat("Общий лимит", `${f0.format(m.max_used)}%`, m.max_used >= 50 ? "warn" : ""))),
+    h("section", {class:"pnl"},
+      h("div", {class:"ph"}, h("h2", {}, "Статистика сделок")),
+      h("div", {class:"grid", style:"border-top:0"},
+        stat("Сделок", s.trades), stat("В плюс", s.winrate != null ? f0.format(s.winrate) + "%" : "—"),
+        stat("Профит-фактор", s.pf != null ? f2.format(s.pf) : "—", s.pf != null ? (s.pf >= 1 ? "up" : "down") : ""),
+        stat("Макс. просадка", p.max_dd != null ? pct(-p.max_dd) : "—", p.max_dd > 3 ? "down" : ""),
+        stat("Средняя прибыль", s.avg_win != null ? sgn(s.avg_win, 0) : "—", "up"),
+        stat("Средний убыток", s.avg_loss != null ? sgn(s.avg_loss, 0) : "—", "down"),
+        stat("Лучшая", s.best != null ? sgn(s.best, 0) : "—", "up"),
+        stat("Худшая", s.worst != null ? sgn(s.worst, 0) : "—", "down"))),
+    h("section", {class:"pnl"},
+      h("div", {class:"ph"}, h("h2", {}, "Средства профиля"),
+        tabs(pRange, RANGES, (k) => { pRange = k; loadProfile(); }, "Период")),
+      h("div", {class:"chart", id:"pChart"})),
+  ];
+  const syms = Object.entries(p.by_symbol || {});
+  if (syms.length) pieces.push(h("section", {class:"pnl"}, h("div", {class:"ph"}, h("h2", {}, "Результат по инструментам, $")),
+    barsBlock(syms.map(([k, v]) => ({l:k, v})))));
+  pieces.push(h("section", {class:"pnl"},
+    h("div", {class:"ph"}, h("h2", {}, "Открытые позиции"), p.positions.length ? h("span", {class:"note n", style:"margin-left:auto"}, `плавающий ${sgn(m.floating)}`) : null),
+    p.positions.length ? p.positions.map(x => h("div", {class:"row"},
+      h("span", {class:"side " + x.type}, x.type === "buy" ? "BUY" : "SELL"),
+      h("div", {class:"main"}, h("div", {class:"t1 n"}, `${x.sym} ${x.vol}`),
+        h("div", {class:"t2 n"}, `${x.open} → ${x.cur}${x.sl ? " · SL " + x.sl : ""} · ${dur(S.server_now - x.t)}`)),
+      h("div", {class:"val n " + tone(x.profit)}, sgn(x.profit))))
+    : h("div", {class:"empty"}, "Позиций нет — профиль ждёт сигнала.")));
+  const tr = p.trades;
+  pieces.push(h("section", {class:"pnl"},
+    h("div", {class:"ph"}, h("h2", {}, "История сделок"), tr && tr.length ? h("span", {class:"note", style:"margin-left:auto"}, `последние ${tr.length}`) : null),
+    tr == null ? h("div", {class:"empty"}, "Загружаю…")
+    : tr.length ? tr.slice(0, 40).map(x => h("div", {class:"row"},
+        h("span", {class:"side " + x.side}, x.side === "buy" ? "BUY" : "SELL"),
+        h("div", {class:"main"}, h("div", {class:"t1 n"}, `${x.sym} ${x.vol}`),
+          h("div", {class:"t2 n"}, `${x.open != null ? x.open + " → " : ""}${x.close} · ${dt(x.t_close)}${x.t_open ? " · " + dur(x.t_close - x.t_open) : ""}`)),
+        h("div", {class:"val n " + tone(x.profit)}, sgn(x.profit))))
+    : h("div", {class:"empty"}, "Закрытых сделок пока нет.")));
+  body.replaceChildren(...pieces.filter(Boolean));
+  document.getElementById("sheet").scrollTop = y;
+  const box = document.getElementById("pChart");
+  if (p.history) lineChart(box, [{id:p.id, label:p.name, pts:p.history}], {height:180, single:true, base:m.initial,
+    fmt:(v, full) => full ? money(v) : f1.format(v / 1000) + "K", aria:"Средства профиля"});
+  else box.append(h("div", {class:"empty", style:"border:0"}, "Загружаю график…"));
+}
+
+/* ── управление ── */
+function toast(t) {
+  let el = document.getElementById("toast");
+  if (!el) { el = h("div", {class:"toast", id:"toast", role:"status"}); document.body.append(el); }
+  el.textContent = t; el.classList.add("on");
+  clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("on"), 3500);
+}
+function confirmAsk(text, btn) {
+  return new Promise((res) => {
+    if (tg && tg.showConfirm) { try { tg.showConfirm(text, (ok) => res(!!ok)); return; } catch (e) {} }
+    // вне Telegram: второе нажатие в течение 4 с подтверждает
+    if (btn.classList.contains("armed")) { btn.classList.remove("armed"); res(true); return; }
+    const old = btn.textContent; btn.classList.add("armed"); btn.textContent = "Нажмите ещё раз";
+    setTimeout(() => { btn.classList.remove("armed"); btn.textContent = old; }, 4000); res(false);
+  });
+}
+async function doAction(btn, id, action, question) {
+  // страница на GitHub не связана с Mac напрямую — команду выполняет бот (там же подтверждение)
+  haptic(action === "close" || action === "stopall" ? "heavy" : "medium");
+  const link = `https://t.me/${BOT}?start=act_${action}_${id}`;
+  toast("Открываю бота — подтвердите команду там");
+  try { if (tg && tg.openTelegramLink) { tg.openTelegramLink(link); return; } } catch (e) {}
+  location.href = link;
+}
+function signalNote(p) {
+  const ea = p.ea || {};
+  if (ea.signal == null) return null;
+  const s = ea.signal;
+  const txt = s < 0 ? "нет данных — на сервере мало дневной истории" : s === 0 ? "вне рынка (условия не выполнены)" : `купить, доля ${Math.round(s * 100)}% от риска`;
+  const nd = ea.next_decision ? new Date(ea.next_decision * 1000).toLocaleString("ru-RU", {weekday:"short", day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"}) : "—";
+  return h("section", {class:"pnl"}, h("div", {class:"grid", style:"border-top:0;grid-template-columns:1fr 1fr"},
+    h("div", {}, h("span", {}, "Сигнал сейчас (без сделки)"), h("b", {class: s > 0 ? "up" : s < 0 ? "down" : ""}, txt)),
+    h("div", {}, h("span", {}, "Следующее решение"), h("b", {}, nd))));
+}
+function profileActions(p) {
+  const paused = p.state === "paused" || (p.ea && (p.ea.paused || p.ea.want_pause));
+  const name = `${p.id} ${p.name}`;
+  const pb = h("button", {class:"btn " + (paused ? "go" : ""), onclick: (e) => doAction(e.currentTarget, p.id, paused ? "resume" : "pause")},
+    paused ? "▶ Продолжить" : "⏸ Пауза");
+  const cb = h("button", {class:"btn danger", onclick: (e) => doAction(e.currentTarget, p.id, "close",
+    `Закрыть все позиции ${name} и поставить профиль на паузу?`)}, "✕ Закрыть позиции");
+  const nb = h("button", {class:"btn", onclick: (e) => doAction(e.currentTarget, p.id, "now",
+    `${name}: принять решение сейчас по текущим ценам, не дожидаясь вечернего окна?`)}, "⚡ Решить сейчас");
+  return [h("div", {class:"acts"}, pb, nb, cb),
+    p.ea && p.ea.now_pending ? h("div", {class:"ea-note"}, "Решение отправлено — советник выполнит, как только рынок открыт (обычно за 10–60 секунд)…") : null,
+    p.ea && p.ea.close_pending ? h("div", {class:"ea-note"}, "Команда на закрытие отправлена — ждём подтверждения от MT5…") : null,
+    p.ea && p.ea.want_pause && !p.ea.paused ? h("div", {class:"ea-note"}, "Пауза отправлена — ждём подтверждения от MT5…") : null];
+}
+
+/* ── загрузка ── */
+async function loadState() {
+  try {
+    S = await api("/api/state"); loadedAt = Date.now();
+    const y = window.scrollY; render(); window.scrollTo(0, y);
+    if (openId) loadProfile();
+  } catch (e) {
+    if (S) return;
+    document.getElementById("app").replaceChildren(e.message === "403"
+      ? h("div", {class:"msg"}, h("b", {}, "Нет доступа"), "Откройте терминал кнопкой «Терминал» в боте — в ссылке должен быть ключ.")
+      : h("div", {class:"msg"}, h("b", {}, "Данные пока недоступны"), "Не удалось загрузить данные с GitHub. Проверьте интернет — повторяю каждые 10 секунд."));
+  }
+}
+async function loadHistory() {
+  const box = document.getElementById("perfChart"); if (box) box.style.opacity = .5;
+  try { HIST = (await api("/api/history?r=" + range)).series || {}; } catch (e) {}
+  if (box) box.style.opacity = "";
+  drawPerf();
+}
+loadState().then(loadHistory);
+setInterval(loadState, 10000);
+setInterval(loadHistory, 60000);
+setInterval(tick, 1000);
+let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { drawPerf(); if (openId) renderProfile(); }, 150); });
+</script>
+</body>
+</html>
