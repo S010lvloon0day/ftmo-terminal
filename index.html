@@ -596,7 +596,7 @@ function renderProfile() {
     h("p", {class:"p-desc"}, p.desc),
     h("div", {class:"tags"},
       tag("", p.symbols.join(", ")), tag("стратегия", p.strategy), p.sma ? tag("SMA", p.sma) : null,
-      p.risk ? tag("риск", Math.round(p.risk * 100) + "%") : null, p.time ? tag("решение", p.time) : null,
+      p.risk ? tag("риск", (+(p.risk * 100).toFixed(2)) + "%") : null, p.time ? tag("решение", p.time) : null,
       p.flat_weekend ? tag("", "закрывает в пятницу") : null, p.magic ? tag("magic", p.magic) : null,
       tag(p.virtual ? "виртуальный счёт" : "счёт", "$" + money(m.initial, 0)), p.tested ? tag("", "есть бэктест") : null),
     h("div", {class:"p-eq n"}, h("span", {class:"big"}, money(m.equity)),
