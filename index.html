@@ -630,7 +630,7 @@ function feedPanel() {
 }
 
 /* ── рынки и сделки ── */
-const SYMN = {"US100.sim":"Nasdaq 100", "US500.sim":"S&P 500", "US30.sim":"Dow Jones", "XAUUSD.sim":"Золото"};
+const SYMN = {"US100.sim":"Nasdaq 100", "US500.sim":"S&P 500", "US30.sim":"Dow Jones", "XAUUSD.sim":"Золото", "XAGUSD.sim":"Серебро", "USOIL.sim":"Нефть WTI", "BTCUSD.sim":"Биткоин"};
 const symName = (s) => SYMN[s] || s.replace(".sim", "");
 let mkSym = store.get("mkSym") || "US100.sim";
 const fmtPx = (v, dg) => sp(new Intl.NumberFormat("ru-RU", {minimumFractionDigits:dg, maximumFractionDigits:dg}).format(v));
