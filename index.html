@@ -167,6 +167,26 @@ html:not(.tg) .back{display:block}
 .toast.on{opacity:1}
 .msg{padding:80px 20px;text-align:center;color:var(--dim);line-height:1.5}
 .msg b{display:block;color:var(--text);font-size:17px;margin-bottom:6px}
+/* пульт состояния: одним взглядом — торгует ли бот, открыт ли рынок, есть ли связь */
+.verdict{padding:16px 0 12px}
+.verdict h1{margin:0;font-size:22px;line-height:1.2;font-weight:700;letter-spacing:-.2px}
+.verdict p{margin:4px 0 0;color:var(--dim);font-size:13.5px;line-height:1.4;max-width:60ch}
+.verdict.ok h1{color:var(--up)}.verdict.bad h1{color:var(--down)}.verdict.warn h1{color:var(--warn)}.verdict.idle h1{color:var(--text)}
+.board{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:12px}
+.lamp{background:var(--panel);padding:10px 11px 11px;min-width:0;border-top:3px solid var(--faint)}
+.lamp.ok{border-top-color:var(--up)}.lamp.bad{border-top-color:var(--down)}.lamp.warn{border-top-color:var(--warn)}.lamp.idle{border-top-color:var(--faint)}
+.lamp .k{font-size:11px;color:var(--dim)}
+.lamp .v{font-size:14.5px;font-weight:600;margin:3px 0 2px;line-height:1.2}
+.lamp.ok .v{color:var(--up)}.lamp.bad .v{color:var(--down)}.lamp.warn .v{color:var(--warn)}
+.lamp .d{font-size:11.5px;color:var(--dim);line-height:1.3}
+@media (max-width:420px){.board{grid-template-columns:1fr}.lamp{display:grid;grid-template-columns:72px 1fr;column-gap:10px;border-top:0;border-left:3px solid var(--faint)}
+  .lamp.ok{border-left-color:var(--up)}.lamp.bad{border-left-color:var(--down)}.lamp.warn{border-left-color:var(--warn)}
+  .lamp .k{grid-row:span 2;align-self:center}.lamp .v{margin:0}}
+.bots .row .t1{white-space:normal}
+.bots .row .t2{white-space:normal}
+.feed .row{min-height:0;align-items:flex-start}
+.feed .when{font-size:11.5px;color:var(--dim);width:64px;flex:none;padding-top:1px}
+.feed .t1{white-space:normal}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -289,9 +309,130 @@ function tick() {
   const c = document.getElementById("clock"); if (!c || !S || !S.has_data) return;
   const el = Math.round((Date.now() - loadedAt) / 1000);
   const a = S.accounts[0], age = Math.min(...S.accounts.map(x => x.age)) + el;
-  const parts = [age < 60 ? `${age}${NB}с` : `${Math.floor(age/60)}${NB}мин`];
+  const parts = [age < 90 ? "данные свежие" : `данные ${dur(age)} назад`];
   if (a.day_reset_at) { const left = a.day_reset_at - (S.server_now + el); if (left > 0) parts.push(`новый день ${Math.floor(left/3600)}:${String(Math.floor(left%3600/60)).padStart(2,"0")}`); }
   c.textContent = parts.join("  ·  ");
+}
+
+/* ── пульт состояния ── */
+// Часы торговли индексов и золота (CFD): с вс 18:00 до пт 17:00 по Нью-Йорку, перерыв каждый день 17:00–18:00.
+function nyParts(ms) {
+  const f = new Intl.DateTimeFormat("en-US", {timeZone:"America/New_York", weekday:"short", hour:"numeric", minute:"numeric", hourCycle:"h23"});
+  const o = {}; f.formatToParts(new Date(ms)).forEach(p => o[p.type] = p.value);
+  return {wd:["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(o.weekday), m:(+o.hour) * 60 + (+o.minute)};
+}
+function marketOpenAt(ms) {
+  const {wd, m} = nyParts(ms);
+  if (wd === 6) return false;                       // суббота
+  if (wd === 0) return m >= 18*60;                  // воскресенье с 18:00
+  if (wd === 5) return m < 17*60;                   // пятница до 17:00
+  return m < 17*60 || m >= 18*60;                   // будни: перерыв 17–18
+}
+function marketInfo() {
+  const now = Date.now(), open = marketOpenAt(now);
+  let t = now - now % 60000;
+  for (let i = 0; i < 60*24*3 && marketOpenAt(t) === open; i++) t += 60000;
+  const {wd, m} = nyParts(now);
+  const weekend = !open && (wd === 6 || wd === 0 || (wd === 5 && m >= 17*60));
+  const at = new Date(t).toLocaleString("ru-RU", {weekday:"short", hour:"2-digit", minute:"2-digit"});
+  return {open, weekend, next:t, at, left:(t - now) / 1000};
+}
+function plainAgo(s) { return s < 90 ? "только что" : `${dur(s)} назад`; }
+function nextCheck(p) {
+  const ea = p.ea || {};
+  if (!ea.next_decision) return "";
+  return new Date(ea.next_decision * 1000).toLocaleString("ru-RU", {weekday:"short", hour:"2-digit", minute:"2-digit"});
+}
+function botLine(p, mk) {
+  const ea = p.ea || {}, n = p.positions.length;
+  const pl = p.positions.reduce((s, x) => s + (x.profit || 0) + (x.swap || 0), 0);
+  const often = /час/.test(p.time || "") ? "проверяет рынок каждый час" : `решает раз в день (${p.time || "вечером"} по серверу)`;
+  if (ea.halted) return {c:"bad", t:`${p.id} остановлен: сработал лимит убытка или достигнута цель`, d:"Новых сделок не будет до сброса этапа."};
+  if (ea.day_halt) return {c:"warn", t:`${p.id} на паузе до завтра: дневной лимит`, d:"Позиции закрыты, завтра продолжит сам."};
+  if (p.state === "paused" || ea.paused) return {c:"warn", t:`${p.id} на паузе — включили вручную`, d:"Новых сделок нет. Снять паузу — в карточке профиля."};
+  if (n) return {c:"ok", t:`${p.id} в сделке: ${n} ${plural(n, "позиция", "позиции", "позиций")}, сейчас ${sgn(pl, 0)}${NB}$`,
+    d:`${p.positions.map(x => `${x.sym.replace(".sim", "")} ${f2.format(x.vol)}`).join(", ")}. ${!mk.open ? "Рынок закрыт — позиции ждут открытия." : p.positions.some(x => x.sl) ? "Выйдет по стопу или тейку." : `Держит, пока сигнал в силе; пересмотр ${nextCheck(p) || "вечером"}.`}`};
+  const nc = nextCheck(p);
+  return {c:"idle", t:`${p.id} ждёт сигнала, сделок нет`, d:`${often[0].toUpperCase() + often.slice(1)}${nc ? `, следующая проверка ${nc}` : ""}.`};
+}
+function statusBoard() {
+  const a = S.accounts[0], t = a.terminal || {}, mk = marketInfo();
+  const el = Math.round((Date.now() - loadedAt) / 1000), age = a.age + el;
+  const live = age < 300, algo = t.trade_allowed && t.expert_allowed;
+  const inTrade = S.profiles.reduce((s, p) => s + p.positions.length, 0);
+  const pl = S.profiles.reduce((s, p) => s + p.positions.reduce((q, x) => q + (x.profit || 0) + (x.swap || 0), 0), 0);
+  const stopped = S.profiles.filter(p => (p.ea || {}).halted || (p.ea || {}).paused || p.state === "paused").length;
+
+  // связь
+  const conn = !live ? {c:"bad", v:"Нет связи", d:`MT5 молчит ${dur(age)}. Проверьте Mac mini.`}
+    : !t.connected ? {c:"bad", v:"Нет брокера", d:"MT5 запущен, но не подключён к серверу."}
+    : !algo ? {c:"bad", v:"Алготорговля выкл.", d:"Кнопка «Алготорговля» в MT5 выключена."}
+    : {c:"ok", v:"На связи", d:`Обновлено ${plainAgo(age)}`};
+  // рынок
+  const mkt = mk.open ? {c:"ok", v:"Открыт", d:`Закроется ${mk.at} (через ${dur(mk.left)})`}
+    : {c:"idle", v:mk.weekend ? "Выходные" : "Перерыв", d:`Откроется ${mk.at} (через ${dur(mk.left)})`};
+  // бот
+  const bot = !live || !algo ? {c:"bad", v:"Не торгует", d: inTrade ? "Стопы у брокера продолжают работать." : "Сделок нет."}
+    : stopped === S.profiles.length ? {c:"warn", v:"Остановлен", d:"Все профили на паузе или остановлены."}
+    : inTrade ? {c:"ok", v:`${inTrade} ${plural(inTrade, "сделка", "сделки", "сделок")}`, d:`Сейчас ${sgn(pl, 0)}${NB}$`}
+    : {c:"idle", v:"Ждёт сигнала", d: mk.open ? "Входит, когда условия совпадут." : "Проверит сигналы после открытия."};
+
+  // главный вывод — одной фразой
+  let vc, vh, vp;
+  if (!live) { vc = "bad"; vh = "Торговля стоит: MT5 не на связи"; vp = `Последние данные ${dur(age)} назад. Проверьте, что Mac mini включён и MetaTrader 5 запущен. Сторож перезапускает MT5 сам в течение 2 минут.`; }
+  else if (!t.connected || !algo) { vc = "bad"; vh = "Торговля стоит"; vp = conn.d; }
+  else if (stopped === S.profiles.length) { vc = "warn"; vh = "Бот на паузе"; vp = "Новые сделки не открываются. Снять паузу можно внизу страницы."; }
+  else if (!mk.open) { vc = "idle"; vh = mk.weekend ? "Рынок на выходных — бот ждёт" : "Перерыв на рынке — бот ждёт";
+    vp = `Торги откроются ${mk.at}. ${inTrade ? `Открытые позиции (${inTrade}) переносятся, стопы у брокера работают.` : "Открытых позиций нет."}`; }
+  else if (inTrade) { vc = "ok"; vh = `Бот торгует: ${inTrade} ${plural(inTrade, "сделка открыта", "сделки открыты", "сделок открыто")}`;
+    vp = `Сейчас по открытым сделкам ${sgn(pl, 0)}${NB}$. Бот сам закроет их по стопу, тейку или своему сигналу.`; }
+  else { vc = "ok"; vh = "Бот работает и ждёт сигнала"; vp = "Рынок открыт, связь есть. Сделок пока нет: условия входа не совпали. Это нормально."; }
+
+  const lamp = (k, x) => h("div", {class:"lamp " + x.c}, h("div", {class:"k"}, k), h("div", {class:"v"}, x.v), h("div", {class:"d"}, x.d));
+  const bots = S.profiles.map(p => {
+    const b = live ? botLine(p, mk) : {c:"bad", t:`${p.id}: данные устарели`, d:`Последнее известное: ${botLine(p, mk).t.replace(p.id + " ", "")}.`};
+    return h("button", {class:"row", style:"width:100%;text-align:left", onclick: () => openProfile(p.id)},
+      h("span", {class:"ok-dot", style:`background:var(--${b.c === "idle" ? "faint" : b.c === "ok" ? "up" : b.c === "bad" ? "down" : "warn"})`}),
+      h("div", {class:"main"}, h("div", {class:"t1"}, h("b", {}, b.t)), h("div", {class:"t2"}, b.d)));
+  });
+  return h("section", {},
+    h("div", {class:"verdict " + vc, role:"status"}, h("h1", {}, vh), h("p", {}, vp)),
+    h("div", {class:"board"}, lamp("Связь с MT5", conn), lamp("Рынок", mkt), lamp("Бот", bot)),
+    h("section", {class:"pnl bots"}, h("div", {class:"ph"}, h("h2", {}, "Что делает каждый профиль")), bots),
+    feedPanel());
+}
+
+/* лента: последние сделки всех профилей простыми словами */
+let FEED = [];
+async function loadFeed() {
+  const out = [];
+  for (const p of S.profiles) {
+    try {
+      const r = await api(`/api/profile?id=${encodeURIComponent(p.id)}&r=7d`);
+      ((r.profile || {}).trades || []).forEach(t => out.push({p:p.id, t}));
+    } catch (e) {}
+  }
+  FEED = out.sort((a, b) => b.t.t_close - a.t.t_close).slice(0, 6);
+  const box = document.getElementById("feed"); if (box) box.replaceWith(feedPanel());
+}
+function feedPanel() {
+  const open = [];
+  S.profiles.forEach(p => p.positions.forEach(x => open.push({p:p.id, x})));
+  open.sort((a, b) => (b.x.t || 0) - (a.x.t || 0));
+  const when = (ts) => new Date(ts * 1000).toLocaleString("ru-RU", {weekday:"short", hour:"2-digit", minute:"2-digit"});
+  const side = (s) => s === "buy" ? "купил" : "продал";
+  const rows = [
+    ...open.slice(0, 6).map(({p, x}) => h("div", {class:"row"}, h("span", {class:"when n"}, x.t ? when(x.t) : ""),
+      h("div", {class:"main"}, h("div", {class:"t1"}, `${p} ${side(x.type)} ${x.sym.replace(".sim", "")} ${f2.format(x.vol)} — сделка открыта`),
+        h("div", {class:"t2"}, x.sl ? `Стоп ${f2.format(x.sl)}${x.tp ? `, тейк ${f2.format(x.tp)}` : ""}` : "Выход по сигналу стратегии")),
+      h("div", {class:"val n " + tone(x.profit)}, sgn(x.profit, 0)))),
+    ...FEED.map(({p, t}) => h("div", {class:"row"}, h("span", {class:"when n"}, when(t.t_close)),
+      h("div", {class:"main"}, h("div", {class:"t1"}, t.open ? `${p} ${side(t.side)} ${t.sym.replace(".sim", "")} ${f2.format(t.vol)} — закрыта ${t.profit >= 0 ? "в плюс" : "в минус"}`
+          : `Закрыта позиция старой стратегии: ${t.sym.replace(".sim", "")} ${f2.format(t.vol)}`),
+        h("div", {class:"t2"}, t.open ? `Вход ${f2.format(t.open)}, выход ${f2.format(t.close)}` : `Выход ${f2.format(t.close)}`)),
+      h("div", {class:"val n " + tone(t.profit)}, sgn(t.profit, 0))))];
+  return h("section", {class:"pnl feed", id:"feed"}, h("div", {class:"ph"}, h("h2", {}, "Последние сделки"), h("span", {class:"note", style:"margin-left:auto"}, "за 7 дней, $")),
+    rows.length ? rows : h("div", {class:"empty"}, "Сделок за неделю не было. Как только бот войдёт в рынок, сделка появится здесь."));
 }
 
 /* ── главный экран ── */
@@ -304,7 +445,7 @@ function render() {
     return;
   }
   const keepChart = document.getElementById("perf");
-  app.replaceChildren(...S.accounts.map(accountBlock), tape(), perfPanel(), leaderPanel(), contribPanel(), symbolPanel(), healthPanel());
+  app.replaceChildren(statusBoard(), ...S.accounts.map(accountBlock), tape(), perfPanel(), leaderPanel(), contribPanel(), symbolPanel(), healthPanel());
   if (keepChart) document.getElementById("perf").replaceWith(keepChart);
   else drawPerf();
 }
@@ -554,9 +695,9 @@ function healthPanel() {
     h("div", {class:"acts pad"},
       h("button", {class:"btn go", onclick: (e) => doAction(e.currentTarget, "all", "resume", "Снять паузу со всех профилей?")}, "▶ Продолжить всё"),
       h("button", {class:"btn", onclick: (e) => doAction(e.currentTarget, "all", "now",
-        "Все профили: принять решение сейчас по текущим ценам?")}, "⚡ Решить всем"),
+        "Все профили: принять решение сейчас по текущим ценам?")}, "⚡ Проверить сигналы"),
       h("button", {class:"btn danger", onclick: (e) => doAction(e.currentTarget, "all", "stopall",
-        "Закрыть ВСЕ позиции и поставить все профили на паузу?")}, "⛔ Стоп всё")),
+        "Закрыть ВСЕ позиции и поставить все профили на паузу?")}, "⛔ Закрыть всё")),
     h("div", {class:"empty", style:"font-size:12px"}, "Кнопки открывают бота: подтвердите команду там — советник выполнит её за 10 секунд. Данные здесь обновляются раз в минуту."));
 }
 
@@ -717,6 +858,7 @@ function profileActions(p) {
 async function loadState() {
   try {
     S = await api("/api/state"); loadedAt = Date.now();
+    if (!FEED.length || Date.now() - (window._feedAt || 0) > 60000) { window._feedAt = Date.now(); loadFeed(); }
     const y = window.scrollY; render(); window.scrollTo(0, y);
     if (openId) loadProfile();
   } catch (e) {
