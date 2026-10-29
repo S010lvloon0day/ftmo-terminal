@@ -259,7 +259,7 @@ details.pnl[open] summary .ph::after{content:"−"}
 .summary{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:13.5px;line-height:1.5}
 .summary code{display:inline-block;margin-top:8px;font-size:11.5px;color:var(--dim);background:var(--raise);padding:2px 6px;border-radius:4px}
 .bld-bar{position:fixed;left:0;right:0;bottom:0;z-index:8;background:linear-gradient(transparent,var(--bg) 22%);padding:22px 0 calc(12px + env(safe-area-inset-bottom,0px));transform:translateY(120%);transition:transform .28s}
-.bld.open + .bld-bar{transform:none}
+.bld-bar{visibility:hidden}.bld.open + .bld-bar{transform:none;visibility:visible}
 .bld-bar .btn{width:100%;min-height:50px;font-size:15px;background:var(--sel);color:#0f141b;border:0}
 .bld-bar .hint{text-align:center}
 /* Montserrat: шире IBM Plex — чуть меньше кегль, плотнее заголовки, цифры моноширинные */
@@ -278,6 +278,89 @@ body{font-size:13.5px;letter-spacing:-.05px}
 .nav a{flex:none;font-size:12.5px;font-weight:600;color:var(--dim);text-decoration:none;padding:6px 11px;border-radius:7px}
 .nav a.on{background:var(--raise);color:var(--text)}
 section[id],div[id^=sec-]{scroll-margin-top:92px}
+/* ═══ Табло ═══ цвет несёт только состояние: прибыль, убыток, ожидание, авария */
+:root{
+  --bg:#16181d; --panel:#1e2128; --raise:#272b33; --line:rgba(255,255,255,.075);
+  --text:#f3f4f6; --dim:#9aa1ad; --faint:#646b78;
+  --up:#34c98a; --down:#ff6b7a; --warn:#f3b34c; --sel:#8fb8ff;
+  --up-bg:rgba(52,201,138,.13); --down-bg:rgba(255,107,122,.13); --sel-bg:rgba(143,184,255,.13);
+  --gain:#14905f; --loss:#c8374b; --idle:#2c313b; --alarm:#9f2335;
+}
+body{font-size:14.5px}
+.top{background:transparent;border-bottom:0;position:absolute;left:0;right:0}
+.top .wrap{color:rgba(255,255,255,.72)}
+.top b{color:#fff}
+.nav{top:0;margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));background:rgba(22,24,29,.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--line)}
+.nav a{font-size:13px;border-radius:999px;padding:7px 13px}
+.nav a.on{background:var(--text);color:var(--bg)}
+section[id],div[id^=sec-]{scroll-margin-top:56px}
+
+/* табло */
+.hero{margin:0 calc(-1 * max(16px,env(safe-area-inset-left,0px)));padding:52px max(16px,env(safe-area-inset-left,0px)) 22px;color:#fff;position:relative;overflow:hidden}
+.hero.gain{background:var(--gain)}.hero.loss{background:var(--loss)}.hero.idle{background:var(--idle)}.hero.alarm{background:var(--alarm)}
+.hero .k{font-size:14px;font-weight:600;opacity:.82}
+.hero .big{font-size:52px;line-height:1.02;font-weight:800;letter-spacing:-2px;margin:4px 0 6px;font-feature-settings:"tnum" 1}
+.hero .big.word{font-size:38px;letter-spacing:-1.2px}
+.hero .say{font-size:14.5px;line-height:1.45;opacity:.92;max-width:44ch}
+.facts{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px}
+.fact{display:inline-flex;align-items:center;gap:7px;background:rgba(0,0,0,.18);border-radius:999px;padding:7px 12px 7px 10px;font-size:12.5px;font-weight:600}
+.fact i{width:8px;height:8px;border-radius:50%;background:#fff;flex:none}
+.fact.off i{background:transparent;box-shadow:inset 0 0 0 2px #fff}
+.fact span{font-weight:500;opacity:.8}
+.verdict,.board{display:none}
+
+/* разделы без коробок */
+.pnl{background:transparent;border:0;border-radius:0;margin:34px 0 0;overflow:visible}
+.ph{padding:0 0 12px;min-height:0;align-items:baseline}
+.ph h2{font-size:21px;font-weight:800;letter-spacing:-.5px}
+.ph{flex-wrap:wrap;row-gap:2px}.ph .note{font-size:12.5px;margin-left:0!important;flex-basis:100%;order:3}.ph .tabs{margin-left:auto}
+.row{padding:14px 0;border-top:1px solid var(--line);min-height:56px}
+.row .t1{font-size:15px}.row .t2{font-size:13px}
+.bots .row .t1 b{font-weight:700}
+.empty{padding:14px 0;border-top:1px solid var(--line);font-size:14px}
+.ok-dot{width:10px;height:10px}
+.addbtn{border:0;margin-top:10px;background:var(--panel);border-radius:14px;min-height:54px;font-size:15px}
+.feed .when{width:72px;font-size:12.5px}
+
+/* рынок */
+.mk-tabs{display:flex;gap:8px;background:none;border:0;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 4px}
+.mk-tabs::-webkit-scrollbar{display:none}
+.mk-tab{flex:none;min-width:128px;background:var(--panel);border-radius:16px;padding:12px 14px}
+.mk-tab[aria-pressed=true]{background:var(--text);color:var(--bg)}
+.mk-tab[aria-pressed=true]::after{display:none}
+.mk-tab[aria-pressed=true] .nm{color:rgba(22,24,29,.6)}
+.mk-tab[aria-pressed=true] .ch.up{color:var(--gain)}.mk-tab[aria-pressed=true] .ch.down{color:var(--loss)}
+.mk-tab .px{font-size:17px;font-weight:800;letter-spacing:-.3px}
+.mk-tab .dot{bottom:auto;top:12px;right:12px}
+.candles{height:320px;margin-top:6px}
+.ctip{padding:8px 0 0;font-size:12.5px}
+.posx{padding:16px 0;border-top:1px solid var(--line)}
+.posx .say{font-size:14px}
+.side{border-radius:999px;padding:4px 10px}
+
+/* счёт */
+.acct{padding:2px 0 14px}
+.acct .eq{font-size:34px;font-weight:800;letter-spacing:-1.2px}
+.limits{background:none;border:0;gap:10px;border-radius:0}
+.lim{background:var(--panel);border-radius:14px;padding:12px}
+.lim .v{font-size:18px;font-weight:800}
+.meter{height:6px;border-radius:3px}
+.tape{gap:8px}
+.chip{background:var(--panel);border:0;border-radius:999px;padding:8px 12px;font-size:12.5px}
+.tabs{border-radius:999px}.tabs button{border-radius:999px;padding:5px 10px}
+.tabs button[aria-pressed=true]{background:var(--text);color:var(--bg)}
+.lb-head{border-top:0}.lb-row{border-top:1px solid var(--line)}
+.lb-head,.lb-row{padding:0}
+.legend{padding:4px 0 0}
+.bars{padding:2px 0 10px}
+.acts.pad{padding:12px 0;border-top:0}
+.btn{border-radius:14px;min-height:48px;background:var(--panel);border:0}
+.btn.danger{background:var(--down-bg)}.btn.go{background:var(--up-bg)}
+.grid{background:none;border:0;gap:10px}
+.grid div{background:var(--panel);border-radius:12px}
+.gloss{padding:0}
+details.pnl summary .ph{padding-bottom:6px}
+.sheet .pnl{margin-top:24px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -395,7 +478,7 @@ function renderTop() {
   const allOn = S.accounts.every(x => x.online);
   top.replaceChildren(
     h("span", {class:"led " + (allOn ? "on" : "off")}),
-    h("span", {class:"who"}, h("b", {}, `${S.title} ${S.phase}`), S.accounts.length > 1 ? ` · ${S.accounts.length} счетов` : ` #${a.login}`),
+    h("span", {class:"who"}, h("b", {}, "FTMO"), S.accounts.length > 1 ? ` · ${S.accounts.length} счетов` : ` #${a.login}`),
     h("span", {class:"sp n", id:"clock"}));
   tick();
 }
@@ -489,13 +572,28 @@ function statusBoard() {
       h("span", {class:"ok-dot", style:`background:var(--${b.c === "idle" ? "faint" : b.c === "ok" ? "up" : b.c === "bad" ? "down" : "warn"})`}),
       h("div", {class:"main"}, h("div", {class:"t1"}, h("b", {}, b.t)), h("div", {class:"t2"}, b.d)));
   });
-  return h("section", {},
-    h("div", {class:"verdict " + vc, role:"status", id:"sec-main"}, h("h1", {}, vh), h("p", {}, vp)),
-    h("div", {class:"board"}, lamp("Связь с MT5", conn), lamp("Рынок", mkt), lamp("Бот", bot)),
+  // табло: цвет — состояние, цифра — главное число момента
+  const dayPl = S.accounts[0].metrics ? S.accounts[0].metrics.today : 0;
+  let hc, hk, hbig, hword = false, hsay;
+  if (!live) { hc = "alarm"; hk = "Торговля стоит"; hbig = "Нет связи"; hword = true; hsay = vp; }
+  else if (!t.connected || !algo) { hc = "alarm"; hk = "Торговля стоит"; hbig = conn.v; hword = true; hsay = conn.d; }
+  else if (inTrade) { hc = pl >= 0 ? "gain" : "loss"; hk = pl >= 0 ? `В плюсе · ${inTrade} ${plural(inTrade, "сделка", "сделки", "сделок")}` : `В минусе · ${inTrade} ${plural(inTrade, "сделка", "сделки", "сделок")}`;
+    hbig = sgn(pl, 0) + NB + "$"; hsay = mk.open ? "Бот ведёт сделки сам: закроет по стопу, тейку или своему сигналу." : `Рынок закрыт до ${mk.at}. Позиции переносятся, стопы у брокера работают.`; }
+  else { hc = "idle"; hk = mk.open ? "Бот ждёт сигнала" : (mk.weekend ? "Выходные на рынке" : "Перерыв на рынке");
+    hbig = mk.open ? "Нет сделок" : `Откроется ${mk.at}`; hword = true;
+    hsay = mk.open ? "Связь есть, рынок открыт. Условия входа пока не совпали — это нормально." : `До открытия ${dur(mk.left)}. Бот проверит сигналы сразу после открытия.`; }
+  const fact = (on, a, b) => h("div", {class:"fact" + (on ? "" : " off")}, h("i", {}), a, b ? h("span", {}, b) : null);
+  const hero = h("div", {class:"hero " + hc, id:"sec-main", role:"status"},
+    h("div", {class:"k"}, hk), h("div", {class:"big n" + (hword ? " word" : "")}, hbig), h("div", {class:"say"}, hsay),
+    h("div", {class:"facts"},
+      fact(conn.c === "ok", conn.v, conn.c === "ok" ? conn.d.replace("Обновлено ", "") : null),
+      fact(mk.open, mk.open ? "Рынок открыт" : (mk.weekend ? "Выходные" : "Перерыв"), mk.open ? `до ${mk.at}` : `до ${mk.at}`),
+      fact(live, `За сегодня ${sgn(dayPl, 0)}${NB}$`)));
+  return [hero, document.querySelector(".nav"), h("section", {},
     marketsPanel(),
     h("section", {class:"pnl bots", id:"sec-str"}, h("div", {class:"ph"}, h("h2", {}, "Стратегии на счёте"), h("span", {class:"note", style:"margin-left:auto"}, "нажмите — подробно")), bots,
       h("button", {class:"addbtn", onclick: () => openBuilder()}, "+ Собрать свою стратегию")),
-    feedPanel(), glossaryPanel());
+    feedPanel(), glossaryPanel())];
 }
 
 /* лента: последние сделки всех профилей простыми словами */
@@ -636,7 +734,7 @@ function drawCandles(box, q, mine) {
 }
 function glossaryPanel() {
   const it = (a, b) => [h("dt", {}, a), h("dd", {}, b)];
-  return h("details", {class:"pnl"}, h("summary", {}, h("div", {class:"ph"}, h("h2", {}, "Как читать: лонг, шорт, стоп, тейк"))),
+  return h("details", {class:"pnl"}, h("summary", {}, h("div", {class:"ph"}, h("h2", {}, "Как читать"))),
     h("div", {class:"gloss"}, h("dl", {},
       it("Лонг ↑", "Покупка. Заработок, когда цена растёт. Все наши стратегии торгуют только лонг."),
       it("Шорт ↓", "Продажа. Заработок, когда цена падает. Наши стратегии шорт не открывают: на истории индексы и золото чаще растут, и шорт ухудшал результат."),
@@ -776,7 +874,7 @@ function render() {
   }
   const keepChart = document.getElementById("perf");
   renderNav();
-  app.replaceChildren(statusBoard(), h("div", {id:"sec-acc"}), ...S.accounts.map(accountBlock), tape(), perfPanel(), leaderPanel(), contribPanel(), symbolPanel(), healthPanel());
+  app.replaceChildren(...statusBoard(), h("div", {id:"sec-acc"}), ...S.accounts.map(accountBlock), tape(), perfPanel(), leaderPanel(), contribPanel(), symbolPanel(), healthPanel());
   if (keepChart) document.getElementById("perf").replaceWith(keepChart);
   else drawPerf();
 }
@@ -1002,8 +1100,8 @@ function symbolPanel() {
   const e = Object.entries(S.by_symbol || {});
   if (!e.length) return null;
   return h("section", {class:"pnl"},
-    h("div", {class:"ph"}, h("h2", {}, "Что приносит прибыль: инструменты, $"), h("span", {class:"note", style:"margin-left:auto"}, "все профили")),
-    barsBlock(e.map(([k, v]) => ({l:k, v}))));
+    h("div", {class:"ph"}, h("h2", {}, "Прибыль по инструментам, $"), h("span", {class:"note", style:"margin-left:auto"}, "все профили")),
+    barsBlock(e.map(([k, v]) => ({l:symName(k), v}))));
 }
 
 /* ── терминал ── */
@@ -1019,7 +1117,10 @@ function healthPanel() {
       return [
         row(!!t.connected, t.connected ? `#${a.login}: связь с сервером есть` : `#${a.login}: нет связи с сервером`, a.account.server, t.ping_ms != null ? `${t.ping_ms}${NB}мс` : null),
         row(!!algo, algo ? "Алготорговля включена" : "Алготорговля выключена", algo ? null : "Советники не могут открывать сделки"),
-        row(eaOk, `${S.expect_ea}: ${a.ea_count ?? "—"} из ${need} на графиках`, eaOk ? null : "Часть профилей не запущена"),
+        (() => { const ex = (a.experts || []).map(e => e.split(" ")[0]).filter(e => e !== "FTMOStatus");
+          const needEa = [...new Set(S.profiles.map(p => p.custom ? "Builder" : (p.strategy || "").includes("1:2") ? "RR2" : "PropTrend"))];
+          const miss = needEa.filter(n => !ex.includes(n));
+          return row(!miss.length, miss.length ? `Не запущены: ${miss.join(", ")}` : `Советники работают: ${[...new Set(ex)].join(", ")}`, miss.length ? "Их стратегии сейчас не торгуют" : null); })(),
         row(true, "Свободная маржа", `плечо 1:${a.account.leverage}`, money(a.account.free_margin, 0)),
       ];
     }),
