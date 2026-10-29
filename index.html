@@ -361,6 +361,24 @@ section[id],div[id^=sec-]{scroll-margin-top:56px}
 .gloss{padding:0}
 details.pnl summary .ph{padding-bottom:6px}
 .sheet .pnl{margin-top:24px}
+/* ═══ мягкая палитра ═══ приглушённые, тёплые тона вместо кислотных */
+:root{
+  --bg:#16181d; --panel:#20232a; --raise:#2a2e37; --line:rgba(255,255,255,.07);
+  --text:#eef0f3; --dim:#a3a9b4; --faint:#6b7280;
+  --up:#6fd3a5; --down:#f2918f; --warn:#f0c27a; --sel:#a9bcff;
+  --up-bg:rgba(111,211,165,.12); --down-bg:rgba(242,145,143,.12); --sel-bg:rgba(169,188,255,.12);
+  --gain:#2f7a63; --loss:#a8505c; --idle:#363b47; --alarm:#8a3442;
+}
+.hero.gain{background:linear-gradient(180deg,#2f7a63 0%,#2a6d58 100%)}
+.hero.loss{background:linear-gradient(180deg,#a8505c 0%,#964653 100%)}
+.hero.idle{background:linear-gradient(180deg,#3a3f4c 0%,#323743 100%)}
+.hero.alarm{background:linear-gradient(180deg,#8a3442 0%,#7a2d3a 100%)}
+.fact{background:rgba(255,255,255,.12)}
+.mk-tab[aria-pressed=true]{background:#e9ecf2}
+.nav a.on{background:#e9ecf2}
+.bld-bar .btn{background:#a9bcff}
+.meter i.ok{background:var(--up)}
+.pnl .row .t1,.pnl .row .t2{white-space:normal}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
@@ -588,7 +606,10 @@ function statusBoard() {
     h("div", {class:"facts"},
       fact(conn.c === "ok", conn.v, conn.c === "ok" ? conn.d.replace("Обновлено ", "") : null),
       fact(mk.open, mk.open ? "Рынок открыт" : (mk.weekend ? "Выходные" : "Перерыв"), mk.open ? `до ${mk.at}` : `до ${mk.at}`),
-      fact(live, `За сегодня ${sgn(dayPl, 0)}${NB}$`)));
+      fact(live, `За сегодня ${sgn(dayPl, 0)}${NB}$`),
+      (() => { const rk = S.accounts[0].risk; if (!rk || rk.open == null) return null;
+        return fact(!(rk.block > 0.5), rk.block > 0.5 ? "Входы на паузе" : "Риск в норме",
+          `риск ${f1.format(rk.open)}% из ${f1.format(rk.max)}%`); })()));
   return [hero, document.querySelector(".nav"), h("section", {},
     marketsPanel(),
     h("section", {class:"pnl bots", id:"sec-str"}, h("div", {class:"ph"}, h("h2", {}, "Стратегии на счёте"), h("span", {class:"note", style:"margin-left:auto"}, "нажмите — подробно")), bots,
@@ -1122,6 +1143,8 @@ function healthPanel() {
           const miss = needEa.filter(n => !ex.includes(n));
           return row(!miss.length, miss.length ? `Не запущены: ${miss.join(", ")}` : `Советники работают: ${[...new Set(ex)].join(", ")}`, miss.length ? "Их стратегии сейчас не торгуют" : null); })(),
         row(true, "Свободная маржа", `плечо 1:${a.account.leverage}`, money(a.account.free_margin, 0)),
+        a.risk && a.risk.open != null ? row(!(a.risk.block > 0.5), a.risk.block > 0.5 ? "Риск-менеджер: новые входы на паузе" : "Риск-менеджер: всё в норме",
+          `Если сработают все стопы: −${f1.format(a.risk.open)}% (лимит ${f1.format(a.risk.max)}%). Просадка от пика ${f1.format(a.risk.dd)}%, размер ×${f2.format(a.risk.mult)}`) : null,
       ];
     }),
     h("div", {class:"acts pad"},
