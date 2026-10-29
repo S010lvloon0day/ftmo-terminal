@@ -187,12 +187,86 @@ html:not(.tg) .back{display:block}
 .feed .row{min-height:0;align-items:flex-start}
 .feed .when{font-size:11.5px;color:var(--dim);width:64px;flex:none;padding-top:1px}
 .feed .t1{white-space:normal}
+/* рынки: свечной график с уровнями сделки */
+.mk-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border-bottom:1px solid var(--line)}
+.mk-tab{background:var(--panel);padding:8px 10px;text-align:left;min-width:0;position:relative}
+.mk-tab[aria-pressed=true]{background:var(--raise)}
+.mk-tab[aria-pressed=true]::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--sel)}
+.mk-tab .nm{font-size:11.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mk-tab .px{font-size:14px;font-weight:600;margin-top:1px}
+.mk-tab .ch{font-size:11.5px}
+.mk-tab .dot{position:absolute;top:9px;right:9px;width:6px;height:6px;border-radius:50%;background:var(--sel)}
+@media (max-width:420px){.mk-tab{padding:7px 8px}.mk-tab .px{font-size:13px}}
+.candles{position:relative;height:300px;touch-action:pan-y;user-select:none}
+.candles svg{display:block;width:100%;height:100%}
+.ctip{font-size:11.5px;color:var(--dim);padding:7px 12px 0;min-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctip b{color:var(--text);font-weight:600}
+.posx{padding:10px 12px 12px;border-top:1px solid var(--line)}
+.posx .hd{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.side{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:3px 8px;border-radius:5px}
+.side.long{color:var(--up);background:var(--up-bg)}.side.short{color:var(--down);background:var(--down-bg)}
+.posx .say{font-size:13px;line-height:1.45;margin-top:6px;color:var(--text)}
+.posx .say span{color:var(--dim)}
+.lv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.lv div{font-size:11px;color:var(--dim)}.lv b{display:block;font-size:13.5px;color:var(--text);font-weight:600}
+.lv .s b{color:var(--down)}.lv .t b{color:var(--up)}
+.gloss{padding:2px 12px 10px}
+.gloss dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:8px 12px;font-size:13px;line-height:1.4}
+.gloss dt{font-weight:600}.gloss dd{margin:0;color:var(--dim)}
+details.pnl summary{list-style:none;cursor:pointer}
+details.pnl summary::-webkit-details-marker{display:none}
+details.pnl summary .ph::after{content:"+";margin-left:auto;color:var(--dim);font-size:18px;line-height:1}
+details.pnl[open] summary .ph::after{content:"−"}
+/* конструктор стратегий */
+.addbtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:48px;border-top:1px solid var(--line);color:var(--sel);font-weight:600;font-size:14px}
+.addbtn:active{background:var(--raise)}
+.bld{position:fixed;inset:0;z-index:7;background:var(--bg);overflow:auto;transform:translateY(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);padding-bottom:calc(110px + env(safe-area-inset-bottom,0px))}
+.bld.open{transform:none}
+.bld h1{font-size:21px;margin:14px 0 2px;font-weight:700}
+.bld .lead{color:var(--dim);font-size:13px;margin:0 0 14px;line-height:1.45}
+.fs{margin:0 0 16px}
+.fs > .lb{font-size:12.5px;color:var(--dim);margin:0 0 7px;display:flex;justify-content:space-between;gap:8px}
+.fs > .lb b{color:var(--text);font-weight:600}
+.presets{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 2px}
+.presets::-webkit-scrollbar{display:none}
+.preset{flex:none;width:168px;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 11px}
+.preset b{display:block;font-size:13.5px;margin-bottom:3px}.preset span{font-size:11.5px;color:var(--dim);line-height:1.35;display:block}
+.preset[aria-pressed=true]{border-color:var(--sel);background:var(--sel-bg)}
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:3px}
+.seg button{padding:9px 6px;border-radius:7px;font-weight:600;font-size:13px;color:var(--dim)}
+.seg button[aria-pressed=true]{background:var(--raise);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
+.seg button[aria-pressed=true].l{color:var(--up)}.seg button[aria-pressed=true].s{color:var(--down)}
+.chips{display:grid;grid-template-columns:repeat(2,1fr);gap:6px}
+.tog{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:10px 11px;font-size:13.5px;font-weight:500;text-align:left}
+.tog::before{content:"";width:16px;height:16px;border-radius:4px;border:1.5px solid var(--faint);flex:none}
+.tog[aria-pressed=true]{border-color:var(--sel)}
+.tog[aria-pressed=true]::before{background:var(--sel);border-color:var(--sel);box-shadow:inset 0 0 0 3px var(--panel)}
+.entries{display:grid;gap:6px}
+.entry{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.entry b{font-size:14px}.entry span{display:block;font-size:12px;color:var(--dim);margin-top:2px;line-height:1.35}
+.entry[aria-pressed=true]{border-color:var(--sel);background:var(--sel-bg)}
+.rng{width:100%;accent-color:var(--sel);height:28px;margin:0}
+.hint{font-size:11.5px;color:var(--dim);margin-top:4px;line-height:1.4}
+.hint.warn{color:var(--warn)}
+.sw{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 12px;width:100%;text-align:left}
+.sw .t{flex:1;font-size:13.5px}.sw .t span{display:block;font-size:12px;color:var(--dim);margin-top:2px}
+.sw i{width:40px;height:24px;border-radius:12px;background:var(--line);position:relative;flex:none;transition:background .15s}
+.sw i::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--text);transition:transform .15s}
+.sw[aria-pressed=true] i{background:var(--up)}.sw[aria-pressed=true] i::after{transform:translateX(16px)}
+.summary{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px;font-size:13.5px;line-height:1.5}
+.summary code{display:inline-block;margin-top:8px;font-size:11.5px;color:var(--dim);background:var(--raise);padding:2px 6px;border-radius:4px}
+.bld-bar{position:fixed;left:0;right:0;bottom:0;z-index:8;background:linear-gradient(transparent,var(--bg) 22%);padding:22px 0 calc(12px + env(safe-area-inset-bottom,0px));transform:translateY(120%);transition:transform .28s}
+.bld.open + .bld-bar{transform:none}
+.bld-bar .btn{width:100%;min-height:50px;font-size:15px;background:var(--sel);color:#0f141b;border:0}
+.bld-bar .hint{text-align:center}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
 <header class="top"><div class="wrap" id="top"><span class="led"></span><span>Подключаюсь…</span></div></header>
 <main class="wrap" id="app"><div class="msg">Загружаю данные…</div></main>
+<div class="bld" id="bld" role="dialog" aria-modal="true" aria-label="Своя стратегия"><div class="wrap" id="bldBody"></div></div>
+<div class="bld-bar"><div class="wrap"><button class="btn" id="bldGo">Проверить на истории и запустить</button><div class="hint">Бот пришлёт результат проверки. Запуск — только после вашего «Да».</div></div></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Профиль"><div class="wrap" id="sheetBody"></div></div>
 
 <script>
@@ -398,8 +472,10 @@ function statusBoard() {
   return h("section", {},
     h("div", {class:"verdict " + vc, role:"status"}, h("h1", {}, vh), h("p", {}, vp)),
     h("div", {class:"board"}, lamp("Связь с MT5", conn), lamp("Рынок", mkt), lamp("Бот", bot)),
-    h("section", {class:"pnl bots"}, h("div", {class:"ph"}, h("h2", {}, "Что делает каждый профиль")), bots),
-    feedPanel());
+    marketsPanel(),
+    h("section", {class:"pnl bots"}, h("div", {class:"ph"}, h("h2", {}, "Стратегии на счёте"), h("span", {class:"note", style:"margin-left:auto"}, "нажмите — подробно")), bots,
+      h("button", {class:"addbtn", onclick: () => openBuilder()}, "＋ Собрать свою стратегию")),
+    feedPanel(), glossaryPanel());
 }
 
 /* лента: последние сделки всех профилей простыми словами */
@@ -420,7 +496,7 @@ function feedPanel() {
   S.profiles.forEach(p => p.positions.forEach(x => open.push({p:p.id, x})));
   open.sort((a, b) => (b.x.t || 0) - (a.x.t || 0));
   const when = (ts) => new Date(ts * 1000).toLocaleString("ru-RU", {weekday:"short", hour:"2-digit", minute:"2-digit"});
-  const side = (s) => s === "buy" ? "купил" : "продал";
+  const side = (s) => s === "buy" ? "купил (лонг ↑)" : "продал (шорт ↓)";
   const rows = [
     ...open.slice(0, 6).map(({p, x}) => h("div", {class:"row"}, h("span", {class:"when n"}, x.t ? when(x.t) : ""),
       h("div", {class:"main"}, h("div", {class:"t1"}, `${p} ${side(x.type)} ${x.sym.replace(".sim", "")} ${f2.format(x.vol)} — сделка открыта`),
@@ -433,6 +509,227 @@ function feedPanel() {
       h("div", {class:"val n " + tone(t.profit)}, sgn(t.profit, 0))))];
   return h("section", {class:"pnl feed", id:"feed"}, h("div", {class:"ph"}, h("h2", {}, "Последние сделки"), h("span", {class:"note", style:"margin-left:auto"}, "за 7 дней, $")),
     rows.length ? rows : h("div", {class:"empty"}, "Сделок за неделю не было. Как только бот войдёт в рынок, сделка появится здесь."));
+}
+
+/* ── рынки и сделки ── */
+const SYMN = {"US100.sim":"Nasdaq 100", "US500.sim":"S&P 500", "US30.sim":"Dow Jones", "XAUUSD.sim":"Золото"};
+const symName = (s) => SYMN[s] || s.replace(".sim", "");
+let mkSym = store.get("mkSym") || "US100.sim";
+const fmtPx = (v, dg) => sp(new Intl.NumberFormat("ru-RU", {minimumFractionDigits:dg, maximumFractionDigits:dg}).format(v));
+
+function allPositions() {
+  const out = [];
+  S.profiles.forEach(p => p.positions.forEach(x => out.push(Object.assign({pid:p.id}, x))));
+  return out;
+}
+function marketsPanel() {
+  const Q = S.quotes || {};
+  const syms = Object.keys(Q);
+  if (!syms.length) return h("section", {class:"pnl"}, h("div", {class:"ph"}, h("h2", {}, "Рынки и сделки")),
+    h("div", {class:"empty"}, "Графики появятся через минуту после обновления советника FTMOStatus в MT5."));
+  if (!Q[mkSym]) mkSym = syms[0];
+  const pos = allPositions();
+  const tabs = h("div", {class:"mk-tabs", role:"tablist"}, syms.map(s => {
+    const q = Q[s], ch = q.prev ? (q.bid / q.prev - 1) * 100 : 0, has = pos.some(x => x.sym === s);
+    return h("button", {class:"mk-tab", role:"tab", "aria-pressed":String(s === mkSym), onclick: () => { mkSym = s; store.set("mkSym", s); haptic("sel");
+        document.getElementById("mkt").replaceWith(marketsPanel()); }},
+      has ? h("span", {class:"dot", title:"есть открытая сделка"}) : null,
+      h("div", {class:"nm"}, symName(s)), h("div", {class:"px n"}, fmtPx(q.bid, q.digits > 2 ? 2 : q.digits)),
+      h("div", {class:"ch n " + tone(ch)}, pct(ch)));
+  }));
+  const box = h("div", {class:"candles", id:"candles"});
+  const mine = pos.filter(x => x.sym === mkSym);
+  const sec = h("section", {class:"pnl", id:"mkt"},
+    h("div", {class:"ph"}, h("h2", {}, "Рынки и сделки"), h("span", {class:"note", style:"margin-left:auto"}, "часовые свечи, ваше время")),
+    tabs, box, mine.length ? mine.map(x => positionExplain(x, Q[mkSym])) :
+      h("div", {class:"empty"}, `По ${symName(mkSym)} сейчас сделок нет. Синяя точка на вкладке — там, где бот в сделке.`));
+  requestAnimationFrame(() => drawCandles(box, Q[mkSym], mine));
+  return sec;
+}
+function positionExplain(x, q) {
+  const long = x.type === "buy", dg = Math.min(2, q ? q.digits : 2);
+  const cur = q ? (long ? q.bid : q.ask) : x.cur;
+  const moved = cur - x.open, good = (x.profit + (x.swap || 0)) >= 0;
+  const say = long
+    ? `Лонг — покупка: зарабатываем, когда цена растёт. Купили по ${fmtPx(x.open, dg)}, сейчас ${fmtPx(cur, dg)} — цена ${moved >= 0 ? "выше" : "ниже"} входа, поэтому ${good ? "плюс" : "минус"}.`
+    : `Шорт — продажа: зарабатываем, когда цена падает. Продали по ${fmtPx(x.open, dg)}, сейчас ${fmtPx(cur, dg)}.`;
+  return h("div", {class:"posx"},
+    h("div", {class:"hd"}, h("span", {class:"side " + (long ? "long" : "short")}, long ? "↑ ЛОНГ" : "↓ ШОРТ"),
+      h("b", {}, `${x.pid} · ${f2.format(x.vol)} лота`), h("span", {class:"n " + tone(x.profit), style:"margin-left:auto;font-weight:700"}, sgn(x.profit + (x.swap || 0), 0) + NB + "$")),
+    h("div", {class:"say"}, say),
+    h("div", {class:"lv n"},
+      h("div", {}, "Вход", h("b", {}, fmtPx(x.open, dg))),
+      h("div", {class:"s"}, "Стоп (макс. убыток)", x.sl ? h("b", {}, fmtPx(x.sl, dg)) : h("b", {class:"dim", style:"color:var(--dim);font-weight:500"}, "нет, выход по сигналу")),
+      h("div", {class:"t"}, "Тейк (цель)", x.tp ? h("b", {}, fmtPx(x.tp, dg)) : h("b", {class:"dim", style:"color:var(--dim);font-weight:500"}, "нет, держит тренд"))));
+}
+function drawCandles(box, q, mine) {
+  if (!q || !box.isConnected) return;
+  const bars = q.h1.slice(-(box.clientWidth < 500 ? 60 : 96));
+  const W = box.clientWidth || 360, H = (box.clientHeight || 300), L = 8, R = W - 62, T = 10, B = H - 24 - 22;
+  let lo = Math.min(...bars.map(b => b[3])), hi = Math.max(...bars.map(b => b[2]));
+  const lv = [];
+  mine.forEach(x => { lv.push({v:x.open, c:"var(--sel)", t:x.pid + " вход"}); if (x.sl) lv.push({v:x.sl, c:"var(--down)", t:x.pid + " стоп"}); if (x.tp) lv.push({v:x.tp, c:"var(--up)", t:x.pid + " тейк"}); });
+  lv.forEach(l => { lo = Math.min(lo, l.v); hi = Math.max(hi, l.v); });
+  const pad = (hi - lo) * 0.06 || 1; lo -= pad; hi += pad;
+  const n = bars.length, step = (R - L) / n, bw = Math.max(1.5, step * 0.62);
+  const X = (i) => L + step * (i + 0.5), Y = (v) => B - (B - T) * (v - lo) / (hi - lo);
+  const dg = Math.min(2, q.digits);
+  let g = "";
+  // сетка и шкала цен
+  for (let k = 0; k <= 4; k++) { const v = lo + (hi - lo) * k / 4, y = Y(v).toFixed(1);
+    g += `<line x1="${L}" x2="${R}" y1="${y}" y2="${y}" stroke="var(--line)" stroke-width="1"/>` +
+         `<text x="${R + 6}" y="${(+y + 4)}" fill="var(--faint)" font-size="10.5">${fmtPx(v, dg)}</text>`; }
+  // подписи времени: начало каждого дня
+  let lastDay = "";
+  bars.forEach((b, i) => { const d = new Date(b[0] * 1000), key = d.toDateString();
+    if (key !== lastDay) { lastDay = key; if (i > 2) g += `<line x1="${X(i)}" x2="${X(i)}" y1="${T}" y2="${B}" stroke="var(--line)" stroke-dasharray="2 3"/>` +
+      `<text x="${X(i) + 3}" y="${H - 24 - 6}" fill="var(--faint)" font-size="10.5">${d.toLocaleDateString("ru-RU", {weekday:"short", day:"numeric"})}</text>`; } });
+  // свечи
+  bars.forEach((b, i) => { const up = b[4] >= b[1], c = up ? "var(--up)" : "var(--down)", x = X(i);
+    const y1 = Y(Math.max(b[1], b[4])), y2 = Y(Math.min(b[1], b[4]));
+    g += `<line x1="${x}" x2="${x}" y1="${Y(b[2])}" y2="${Y(b[3])}" stroke="${c}" stroke-width="1"/>` +
+         `<rect x="${(x - bw / 2).toFixed(1)}" y="${y1.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(1, y2 - y1).toFixed(1)}" fill="${c}" rx="0.5"/>`; });
+  // уровни сделки
+  lv.forEach(l => { const y = Y(l.v).toFixed(1);
+    g += `<line x1="${L}" x2="${R}" y1="${y}" y2="${y}" stroke="${l.c}" stroke-width="1.2" stroke-dasharray="5 4"/>` +
+         `<rect x="${R + 2}" y="${y - 9}" width="58" height="18" rx="3" fill="${l.c}"/>` +
+         `<text x="${R + 31}" y="${+y + 4}" fill="#0f141b" font-size="10" font-weight="700" text-anchor="middle">${l.t}</text>`; });
+  // маркер входа на свече
+  mine.forEach(x => { if (!x.t) return; const i = bars.findIndex((b, k) => b[0] <= x.t && (k === n - 1 || bars[k + 1][0] > x.t));
+    if (i < 0) return; const y = Y(x.open) + (x.type === "buy" ? 14 : -14), up = x.type === "buy";
+    g += `<path d="M${X(i)} ${up ? y - 8 : y + 8} l-6 ${up ? 9 : -9} h12z" fill="var(--sel)"/>`; });
+  // текущая цена
+  const py = Y(q.bid).toFixed(1);
+  g += `<line x1="${L}" x2="${R}" y1="${py}" y2="${py}" stroke="var(--text)" stroke-width="1" opacity=".35"/>` +
+       `<rect x="${R + 2}" y="${py - 9}" width="58" height="18" rx="3" fill="var(--text)"/>` +
+       `<text x="${R + 31}" y="${+py + 4}" fill="#0f141b" font-size="10.5" font-weight="700" text-anchor="middle">${fmtPx(q.bid, dg)}</text>`;
+  g += `<line id="cx" x1="0" x2="0" y1="${T}" y2="${B}" stroke="var(--dim)" opacity="0"/>`;
+  box.innerHTML = `<div class="ctip n" id="ctip"></div><svg viewBox="0 0 ${W} ${H - 24}" style="height:calc(100% - 24px)" role="img" aria-label="График ${symName(mkSym)}, часовые свечи">${g}</svg>`;
+  const tip = box.querySelector("#ctip"), cx = box.querySelector("#cx");
+  const show = (i) => { const b = bars[i]; if (!b) return; cx.setAttribute("x1", X(i)); cx.setAttribute("x2", X(i)); cx.setAttribute("opacity", ".6");
+    const d = new Date(b[0] * 1000).toLocaleString("ru-RU", {weekday:"short", day:"numeric", hour:"2-digit", minute:"2-digit"});
+    tip.innerHTML = `${d} · откр <b>${fmtPx(b[1], dg)}</b> макс <b>${fmtPx(b[2], dg)}</b> мин <b>${fmtPx(b[3], dg)}</b> закр <b>${fmtPx(b[4], dg)}</b>`; };
+  const idle = () => { cx.setAttribute("opacity", "0"); const b = bars[n - 1];
+    tip.innerHTML = `${symName(mkSym)} · сейчас <b>${fmtPx(q.bid, dg)}</b> · за день <b class="${tone(q.prev ? q.bid - q.prev : 0)}">${pct(q.prev ? (q.bid / q.prev - 1) * 100 : 0)}</b>`; };
+  box.onpointermove = (e) => { const r = box.getBoundingClientRect(); show(clamp(Math.floor((e.clientX - r.left - L) / step), 0, n - 1)); };
+  box.onpointerleave = idle; idle();
+}
+function glossaryPanel() {
+  const it = (a, b) => [h("dt", {}, a), h("dd", {}, b)];
+  return h("details", {class:"pnl"}, h("summary", {}, h("div", {class:"ph"}, h("h2", {}, "Как читать: лонг, шорт, стоп, тейк"))),
+    h("div", {class:"gloss"}, h("dl", {},
+      it("Лонг ↑", "Покупка. Заработок, когда цена растёт. Все наши стратегии торгуют только лонг."),
+      it("Шорт ↓", "Продажа. Заработок, когда цена падает. Наши стратегии шорт не открывают: на истории индексы и золото чаще растут, и шорт ухудшал результат."),
+      it("Стоп", "Цена, где сделка закроется с убытком сама — у брокера, даже если Mac выключен. Ограничивает потерю."),
+      it("Тейк", "Цена, где сделка закроется с прибылью сама."),
+      it("Лот", "Размер сделки. Его считает бот, чтобы риск был заданным (у «Формулы 1:2» — 0,25% счёта)."),
+      it("Свеча", "Один час торгов: зелёная — цена за час выросла, красная — упала. Тонкие линии — максимум и минимум часа."),
+      it("Перерыв рынка", "Каждый день 17:00–18:00 по Нью-Йорку и выходные (с пт 17:00 до вс 18:00). В это время сделок нет."))));
+}
+
+/* ── конструктор стратегий ── */
+const BOTNAME = (typeof BOT !== "undefined" && BOT) ? BOT : "S010ftnobot";
+function openBot(payload) {
+  const link = `https://t.me/${BOTNAME}?start=${payload}`;
+  try { if (tg && tg.openTelegramLink) { tg.openTelegramLink(link); return; } } catch (e) {}
+  location.href = link;
+}
+const PRESETS = [
+  {n:"Формула 1:2", d:"Пробой часового максимума в тренде, тейк вдвое больше стопа", c:"FL_BO20_T1_S30_R20_K25_H"},
+  {n:"Частые выигрыши", d:"Покупка после резкого отката, ~70% сделок в плюс, но мелкие", c:"FL_RS10_T1_S20_R00_K25_D"},
+  {n:"Тренд надолго", d:"Держит, пока рынок выше 200-дневной средней", c:"FL_TR_T1_S30_R00_K50_D"},
+  {n:"Средние 20/50", d:"Классика: пересечение средних, лонг и шорт", c:"FB_MC2050_T1_S30_R20_K25_H"},
+  {n:"Шорт на перегреве", d:"Продажа после резкого роста, только в нисходящем тренде", c:"FS_RS10_T1_S20_R10_K25_D"},
+];
+const ENTRIES = [
+  {k:"BO", n:"Пробой", d:"Вход, когда цена закрывается на новом максимуме (шорт — минимуме) за N свечей. Ловит начало движения."},
+  {k:"RS", n:"Откат", d:"Вход после резкого движения против тренда (RSI-2). Часто выигрывает, но понемногу."},
+  {k:"MC", n:"Пересечение средних", d:"Вход, когда быстрая средняя пересекает медленную."},
+  {k:"TR", n:"Тренд", d:"В рынке, пока цена выше 200-дневной средней (шорт — ниже). Редкие, но длинные сделки."},
+];
+const BSYM = [["US100.sim","Nasdaq 100"],["US500.sim","S&P 500"],["US30.sim","Dow Jones"],["XAUUSD.sim","Золото"]];
+let B = null;
+function bFromCode(c) {
+  const m = /^([0-9A-F])([LSB])_(BO\d+|RS\d+|MC\d{4}|TR)_T([01])_S(\d\d)_R(\d\d)_K(\d+)_([HD])$/.exec(c);
+  const e = m[3], k = e.slice(0, 2);
+  return {mask:parseInt(m[1], 16), dir:m[2], e:k, n:k === "BO" ? +e.slice(2) : 20, x:k === "RS" ? +e.slice(2) : 10,
+          f:k === "MC" ? +e.slice(2, 4) : 20, s:k === "MC" ? +e.slice(4, 6) : 50, trend:m[4] === "1", stop:+m[5] / 10, rr:+m[6] / 10, risk:+m[7] / 100, tf:m[8], preset:c};
+}
+function bCode(b) {
+  const p2 = (v) => String(Math.round(v)).padStart(2, "0");
+  const e = b.e === "BO" ? "BO" + b.n : b.e === "RS" ? "RS" + b.x : b.e === "MC" ? "MC" + p2(b.f) + p2(b.s) : "TR";
+  return `${b.mask.toString(16).toUpperCase()}${b.dir}_${e}_T${b.trend ? 1 : 0}_S${p2(b.stop * 10)}_R${p2(b.rr * 10)}_K${Math.round(b.risk * 100)}_${b.tf}`;
+}
+function bDescribe(b) {
+  const tfw = b.tf === "H" ? "часовым" : "дневным";
+  const side = {L:"покупает (лонг ↑)", S:"продаёт (шорт ↓)", B:"покупает или продаёт (лонг ↑ и шорт ↓)"}[b.dir];
+  const what = b.e === "BO" ? {L:`когда цена закрывается на максимуме за ${b.n} свечей`, S:`когда цена закрывается на минимуме за ${b.n} свечей`, B:`на пробое максимума или минимума за ${b.n} свечей`}[b.dir]
+    : b.e === "RS" ? {L:`после резкого падения (RSI-2 ниже ${b.x})`, S:`после резкого роста (RSI-2 выше ${100 - b.x})`, B:`после резкого движения (RSI-2 ниже ${b.x} или выше ${100 - b.x})`}[b.dir]
+    : b.e === "MC" ? `когда средняя ${b.f} пересекает среднюю ${b.s}` : "когда дневной тренд в его сторону, и держит, пока тренд жив";
+  const syms = BSYM.filter((_, i) => b.mask >> i & 1).map(x => x[1]).join(", ") || "—";
+  return `Бот ${side} ${what}, по ${tfw} свечам. ${b.trend || b.e === "TR" ? "Только по направлению дневного тренда. " : ""}` +
+    `Стоп — ${f1.format(b.stop)} ATR от входа. ${b.rr ? `Тейк — 1:${f1.format(b.rr)} (в ${f1.format(b.rr)} раза дальше стопа).` : "Тейка нет: выход по обратному сигналу."} ` +
+    `Риск ${f2.format(b.risk)}% (≈${f0.format(1000 * b.risk)}${NB}$ со $100${NB}000) на сделку. Инструменты: ${syms}.`;
+}
+function openBuilder(code) {
+  B = bFromCode(code || PRESETS[0].c);
+  const el = document.getElementById("bld");
+  renderBuilder(); el.classList.add("open"); el.scrollTop = 0; haptic("light");
+  if (tg) { tg.BackButton.show(); tg.BackButton.onClick(closeBuilder); }
+}
+function closeBuilder() {
+  document.getElementById("bld").classList.remove("open");
+  if (tg) { tg.BackButton.offClick(closeBuilder); if (!openId) tg.BackButton.hide(); }
+}
+function renderBuilder() {
+  const body = document.getElementById("bldBody"), code = bCode(B);
+  const set = (patch) => { Object.assign(B, patch, {preset:null}); haptic("sel"); renderBuilder(); };
+  const seg = (cur, opts, on) => h("div", {class:"seg", role:"group"}, opts.map(([k, l, cls]) =>
+    h("button", {class:cls || "", "aria-pressed":String(cur === k), onclick: () => on(k)}, l)));
+  const slider = (label, val, show, min, max, step, on, hint, warn) => {
+    const bv = h("b", {class:"n"}, show());
+    return h("div", {class:"fs"}, h("div", {class:"lb"}, h("span", {}, label), bv),
+      h("input", {class:"rng", type:"range", min, max, step, value:val, "aria-label":label,
+        oninput: (e) => { on(+e.target.value); B.preset = null; bv.textContent = show(); },
+        onchange: () => renderBuilder()}),
+      hint ? h("div", {class:"hint" + (warn ? " warn" : "")}, hint) : null); };
+  const ent = ENTRIES.find(x => x.k === B.e);
+  const param = B.e === "BO" ? slider("Свечей для пробоя", B.n, () => B.n, 5, 120, 1, v => B.n = v, "Меньше — чаще входы и больше ложных; больше — реже, но надёжнее.")
+    : B.e === "RS" ? slider("Порог RSI-2", B.x, () => B.x, 2, 30, 1, v => B.x = v, "Чем ниже порог, тем сильнее нужен откат — сделок меньше, выигрыши чаще.")
+    : B.e === "MC" ? [slider("Быстрая средняя", B.f, () => B.f, 3, 50, 1, v => { B.f = v; if (B.s <= v) B.s = v + 5; }),
+                      slider("Медленная средняя", B.s, () => B.s, 10, 99, 1, v => { B.s = Math.max(v, B.f + 1); })]
+    : null;
+  const riskWarn = B.risk > 0.5;
+  body.replaceChildren(
+    h("div", {class:"sh-top"}, h("button", {class:"back", onclick:closeBuilder}, "‹ Назад")),
+    h("h1", {}, "Своя стратегия"),
+    h("p", {class:"lead"}, "Выберите шаблон или соберите правила сами. Бот проверит стратегию на истории и покажет винрейт, доход и просадку — запуск только после вашего подтверждения."),
+    h("div", {class:"fs"}, h("div", {class:"lb"}, h("span", {}, "Шаблоны")),
+      h("div", {class:"presets"}, PRESETS.map(p => h("button", {class:"preset", "aria-pressed":String(B.preset === p.c),
+        onclick: () => { B = bFromCode(p.c); haptic("sel"); renderBuilder(); }}, h("b", {}, p.n), h("span", {}, p.d))))),
+    h("div", {class:"fs"}, h("div", {class:"lb"}, h("span", {}, "Инструменты")),
+      h("div", {class:"chips"}, BSYM.map(([s, n], i) => h("button", {class:"tog", "aria-pressed":String(!!(B.mask >> i & 1)),
+        onclick: () => { const m = B.mask ^ (1 << i); if (m) set({mask:m}); }}, n)))),
+    h("div", {class:"fs"}, h("div", {class:"lb"}, h("span", {}, "Направление")),
+      seg(B.dir, [["L", "↑ Лонг", "l"], ["S", "↓ Шорт", "s"], ["B", "Оба"]], k => set({dir:k})),
+      h("div", {class:"hint"}, {L:"Лонг — покупка: заработок, когда цена растёт.", S:"Шорт — продажа: заработок, когда цена падает. На истории индексы чаще росли — шорт обычно слабее.", B:"Лонг на росте и шорт на падении — по сигналу."}[B.dir])),
+    h("div", {class:"fs"}, h("div", {class:"lb"}, h("span", {}, "Когда входить")),
+      h("div", {class:"entries"}, ENTRIES.map(x => h("button", {class:"entry", "aria-pressed":String(B.e === x.k), onclick: () => set({e:x.k, rr: x.k === "TR" ? 0 : B.rr})},
+        h("b", {}, x.n), h("span", {}, x.d))))),
+    param,
+    h("div", {class:"fs"}, h("div", {class:"lb"}, h("span", {}, "Свечи")),
+      seg(B.tf, [["H", "Часовые"], ["D", "Дневные"]], k => set({tf:k})),
+      h("div", {class:"hint"}, B.tf === "H" ? "Проверка каждый час, история для теста — 2,4 года." : "Проверка раз в день, история для теста — с 2003 года.")),
+    B.e === "TR" ? null : h("div", {class:"fs"}, h("button", {class:"sw", "aria-pressed":String(B.trend), onclick: () => set({trend:!B.trend})},
+      h("div", {class:"t"}, "Только по тренду", h("span", {}, "Лонг — когда цена выше 200-дневной средней, шорт — когда ниже. Обычно улучшает результат.")), h("i", {}))),
+    slider("Стоп", B.stop * 10, () => `${f1.format(B.stop)} ATR`, 5, 80, 5, v => B.stop = v / 10, "ATR — средний ход цены за свечу. Дальше стоп — реже выбивает, но меньше лот."),
+    slider("Тейк", B.rr * 10, () => B.rr ? `1:${f1.format(B.rr)}` : "по сигналу", 0, 60, 5, v => B.rr = v / 10,
+      B.rr ? (B.rr >= 2 ? "Большой тейк: выигрыши крупные, но реже (винрейт обычно 30–45%)." : "Маленький тейк: выигрыши чаще, но мельче.") : "Без тейка: сделка закрывается обратным сигналом или стопом."),
+    slider("Риск на сделку", B.risk * 100, () => `${f2.format(B.risk)}%`, 5, 100, 5, v => B.risk = v / 100,
+      riskWarn ? "Высокий риск: серия из 10 стопов съест больше 5% — это дневной лимит FTMO." : `Потеря при стопе ≈ ${f0.format(1000 * B.risk)}${NB}$ на счёте $100${NB}000.`, riskWarn),
+    h("div", {class:"fs"}, h("div", {class:"lb"}, h("span", {}, "Что получится")),
+      h("div", {class:"summary"}, bDescribe(B), h("br"), h("code", {}, code))));
+  document.getElementById("bldGo").onclick = () => { haptic("medium"); toast("Открываю бота — он проверит стратегию на истории"); openBot("new_" + code); };
 }
 
 /* ── главный экран ── */
@@ -848,7 +1145,9 @@ function profileActions(p) {
     `Закрыть все позиции ${name} и поставить профиль на паузу?`)}, "✕ Закрыть позиции");
   const nb = h("button", {class:"btn", onclick: (e) => doAction(e.currentTarget, p.id, "now",
     `${name}: принять решение сейчас по текущим ценам, не дожидаясь вечернего окна?`)}, "⚡ Решить сейчас");
-  return [h("div", {class:"acts"}, pb, nb, cb),
+  const del = p.custom ? h("div", {class:"acts"}, h("button", {class:"btn", onclick: () => { haptic("light"); openBot("act_delete_" + p.id); }}, "🗑 Удалить стратегию"),
+    h("button", {class:"btn", onclick: () => openBuilder(p.code)}, "✎ Собрать похожую")) : null;
+  return [h("div", {class:"acts"}, pb, nb, cb), del,
     p.ea && p.ea.now_pending ? h("div", {class:"ea-note"}, "Решение отправлено — советник выполнит, как только рынок открыт (обычно за 10–60 секунд)…") : null,
     p.ea && p.ea.close_pending ? h("div", {class:"ea-note"}, "Команда на закрытие отправлена — ждём подтверждения от MT5…") : null,
     p.ea && p.ea.want_pause && !p.ea.paused ? h("div", {class:"ea-note"}, "Пауза отправлена — ждём подтверждения от MT5…") : null];
@@ -878,7 +1177,7 @@ loadState().then(loadHistory);
 setInterval(loadState, 10000);
 setInterval(loadHistory, 60000);
 setInterval(tick, 1000);
-let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { drawPerf(); if (openId) renderProfile(); }, 150); });
+let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => { drawPerf(); { const m = document.getElementById("mkt"); if (m && S) m.replaceWith(marketsPanel()); } if (openId) renderProfile(); }, 150); });
 </script>
 </body>
 </html>
